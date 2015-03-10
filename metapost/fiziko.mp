@@ -1724,10 +1724,11 @@ begingroup
                 draw isoLines(wood)((wS, lS), woodBlockYRdensity*y + uniformdeviate(1/8woodBlockYRdensity), woodBlockRes);
             endfor;
         );
-        q := ((0, 0) -- (wS, 0) -- (wS, lS) -- (0, lS) -- cycle) scaled woodBlockRes;
+        q := (0, 0) -- (w, 0) -- (w, l) -- (0, l) -- cycle;
+        if (w > l): q := q xscaled -1 rotated -90; fi;
         clip p to q;
         draw p;
-        draw q;
+        draw q withpen thinpen;
     ) if (l < w): xscaled -1 rotated -90 fi
 endgroup
 enddef;
