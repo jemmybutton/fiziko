@@ -1,0 +1,874 @@
+\documentclass{article}
+\usepackage{emp}
+\usepackage{listings}
+
+\newdimen\textWidthPt
+\setlength\textWidthPt\textwidth
+\divide \textWidthPt by 65536
+
+\newdimen\textHeightPt
+\setlength\textHeightPt\textheight
+\divide \textHeightPt by 65536
+
+\newdimen\latexSizes
+\openout \latexSizes = latexSizes.mp\relax
+\write \latexSizes{
+textWidth := \number \textWidthPt pt;
+textHeight := \number \textHeightPt pt;
+}
+\closeout \latexSizes
+
+\author{Sergey Slyusarev}
+\title{``fiziko'' v. 0.1 package for MetaPost }
+
+\lstloadlanguages{MetaPost,TeX}
+\lstset{
+language=MetaPost,
+numbers=left,
+numberstyle=\tiny,
+basicstyle=\scriptsize
+}
+
+\begin{document}
+\begin{empfile}
+
+\begin{empcmds}
+input fiziko_nova_cut40.mp
+input latexSizes.mp
+\end{empcmds}
+
+\maketitle
+
+\begin{abstract}
+This document describes a bunch of macros provided by ``fiziko'' package for MetaPost. The package was initially developed to facilitate preparing a body of illustrations for some physics textbook. 
+\end{abstract}
+
+\tableofcontents
+
+\section{Introduction}
+This MetaPost package, initially developed to facilitate preparing a body of illustrations for a physics textbook, includes a set of ``low level'' macros, required for aesthetically pleasing appearance of black and white illustrations, as well as ``higher level'' ones, that rely on them.
+
+The idea behind the package is that resolution of printing is often insufficient to make ugly raster halftone patterns invisible, and even when resolution is sufficient, generic digital gradient shading looks plasticky and boring, so, one possible solution is, instead of relying on ordinary halftones, to mock woodcut or ink drawing shading with reasonably thin strokes that will give some oldschool feel to illustrations. By changing minimal stroke width it is possible to quickly adjust illustrations to be printed with given hardware limitations without or with minimal changes in illustrations themselves. 
+
+In order to make illustrations look less mechanically monotonous, as digital illustrations often do, some degree of randomness is introduced here and there.
+
+Apart from macros related to these aesthetical complications, ``fiziko'' package contains several macros of general interest that were used in abovementioned textbook.
+
+\section{Usage}
+Simply include this in the beginning of your MetaPost document:
+
+\begin{lstlisting}
+input fiziko.mp
+\end{lstlisting}
+
+One obvious use scenario for the package is to include its output in a LaTeX document. In that case you might want to use some metrics from LaTeX in your MetaPost pictures in order to fit them better in your document layout. It can be done by including something like this in your LaTeX document preamble:
+
+\begin{lstlisting}[language=TeX]
+\newdimen\textWidthPt
+\setlength\textWidthPt\textwidth
+\divide \textWidthPt by 65536
+
+\newdimen\textHeightPt
+\setlength\textHeightPt\textheight
+\divide \textHeightPt by 65536
+
+\newdimen\latexSizes
+\openout \latexSizes = latexSizes.mp\relax
+\write \latexSizes{
+textWidth := \number \textWidthPt pt;
+textHeight := \number \textHeightPt pt;
+}
+\closeout \latexSizes
+\end{lstlisting}
+
+Then simply input resulting file in your MetaPost document:
+
+\begin{lstlisting}
+input latexSizes.mp
+\end{lstlisting}
+
+
+\section{Global variables}
+A few global variables control different aspects of macros behavior. Not all theoretically possible values are meaningful and some will definitely result in ugly pictures or errors.
+
+\subsection{minStrokeWidth}
+This variable controls minimal thickness of lines that are used for shading. Below this value lines are not getting thinner, but become dashed instead, maintaining roughly the same amount of ink per unit length as thinner line would take. Default value is one third of a point:
+
+\begin{lstlisting}
+minStrokeWidth := 1/3pt;
+\end{lstlisting}
+
+\subsection{lightDirection}
+This variable controls direction from which light falls on shaded objects. It's of \texttt{pair} type and is set in radians. Default direction is top-left:
+
+\begin{lstlisting}
+lightDirection := (-1/8pi, 1/8pi);
+\end{lstlisting}
+
+\section{``Lower level'' macros}
+Currently, algorithms are quite stupid and will produce decent results only in certain, simple, circumstances.
+
+\subsection{offsetPath (\emph{path})(\emph{offset function})}
+This macro returns offset path (of type \texttt{path}) to current path with distance from the original path controlled by some arbitrary function; typically, it is a function of path length, set as either \texttt{offsetPathTime} or \texttt{offsetPathLength}. Former is simply \texttt{time} on current path and changes from 0 to \texttt{length(path)}, and latter changes from 0 to 1 over the path \texttt{arctime} (as a function of \texttt{arclength}).
+
+\begin{lstlisting}
+beginfig(1)
+    path p, q;
+    p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
+    q := offsetPath(p)(1cm*sin(offsetPathLength*pi));
+    draw p;
+    draw q dashed evenly;
+endfig;
+\end{lstlisting}
+
+\noindent\begin{emp}(1cm, 1cm)
+beginfig(1)
+    path p, q;
+    p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
+    q := offsetPath(p)(1cm*sin(offsetPathLength*pi));
+    draw p;
+    draw q dashed evenly;
+endfig;
+\end{emp}
+
+\subsection{brush (\emph{path})(\emph{offset function})}
+This macro returns a \texttt{picture} of a line of variable width along given path, which is  controlled by some arbitrary function, analogous to \texttt{offsetPath}. If line is getting thinner than \texttt{minStrokeWith}, it is drawn dashed.
+
+\begin{lstlisting}
+beginfig(2)
+    path p;
+    p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
+    draw brush (p)(2minStrokeWidth*sin(offsetPathLength*pi));
+endfig;
+\end{lstlisting}
+
+\noindent\begin{emp}(1cm, 1cm)
+beginfig(2)
+    path p;
+    p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
+    draw brush (p)(2minStrokeWidth*sin(offsetPathLength*pi));
+endfig;
+\end{emp}
+
+\subsection{sphere.c (\emph{diameter})}
+This macro returns a \texttt{picture} of a sphere with specified diameter shaded with concentric strokes. Strokes are arranged to fit \texttt{tube.l}.
+
+\begin{lstlisting}
+beginfig(3)
+    for i := 1 step 1 until 6:
+        draw sphere.c(i*1/4cm) shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+endfig;
+\end{lstlisting}
+
+\noindent\begin{emp}(1cm, 1cm)
+beginfig(3)
+    for i := 1 step 1 until 6:
+        draw sphere.c(i*1/4cm) shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+endfig;
+\end{emp}
+
+\subsection{sphere.l (\emph{diameter, angle})}
+This macro returns a \texttt{picture} of a shaded sphere with specified diameter. Unlike \texttt{sphere.c} macro, this one draws latitudinal strokes around axis rotated at specified \texttt{angle}.
+
+\begin{lstlisting}
+beginfig(4)
+    for i := 1 step 1 until 6:
+        draw sphere.l(i*1/4cm, -90 + i*30)
+             shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+endfig;\end{lstlisting}
+
+\noindent\begin{emp}(1cm, 1cm)
+beginfig(4)
+    for i := 1 step 1 until 6:
+        draw sphere.l(i*1/4cm, -90 + i*30)
+             shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+endfig;
+\end{emp}
+
+\subsection{tube.l (\emph{path})(\emph{offset function})}
+This macro returns a \texttt{picture} of a shaded ``tube'' of variable width along given path, which is  controlled by some arbitrary function, analogous to \texttt{offsetPath}. ``Tube'' drawn by this macro is shaded be longitudal strokes.
+
+\begin{lstlisting}
+beginfig(5)
+    path p;
+    p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
+    draw tube.l (p)(1/2cm*sin(offsetPathLength*pi));
+endfig;
+\end{lstlisting}
+
+\noindent\noindent\begin{emp}(1cm, 1cm)
+beginfig(5)
+    path p;
+    p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
+    draw tube.l (p)(1/2cm*sin(offsetPathLength*pi));
+endfig;
+\end{emp}
+
+\subsection{tube.t (\emph{path})(\emph{offset function})}
+This macro returns a \texttt{picture} of a shaded ``tube'' of variable width along given path, which is  controlled by some arbitrary function, analogous to \texttt{offsetPath}. ``Tube'' drawn by this macro is shaded be transverse strokes.
+
+\begin{lstlisting}
+beginfig(6)
+    path p;
+    p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
+    draw tube.t (p)(1/2cm*sin(offsetPathLength*pi));
+endfig;
+\end{lstlisting}
+
+\noindent\begin{emp}(1cm, 1cm)
+beginfig(6)
+    path p;
+    p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
+    draw tube.t (p)(1/2cm*sin(offsetPathLength*pi));
+endfig;
+\end{emp}
+
+\subsection{tubeOutline (\emph{path})(\emph{offset function})}
+This macro returns outline of a tube that can be used to mask objects behind it.
+
+\section{``Higher level'' macros}
+Using macros described in previous section it is possible to construct more complex images. Macros for drawing some often used images are present in this package.
+
+\subsection{eye (\emph{angle})}
+This macro returns a \texttt{picture} of an eye pointed at the direction \texttt{angle} (in degrees). Eye size is controlled by a global variable \texttt{eyescale}, which has default value of \texttt{eyescale := 1/2cm;}.
+
+\begin{lstlisting}
+beginfig(7)
+    save eyescale;
+    for i := 1 step 1 until 6:
+        eyescale := 1/6cm*i;
+        draw eye(i*60) shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+endfig;
+\end{lstlisting}
+
+\noindent\begin{emp}(1cm, 1cm)
+beginfig(7)
+    save eyescale;
+    for i := 1 step 1 until 6:
+        eyescale := 1/6cm*i;
+        draw eye(i*60) shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+endfig;
+\end{emp}
+
+\subsection{pulley (\emph{radius, angle})}
+This macro returns a \texttt{picture} of a pulley with specified \texttt{radius} and its support pointed at the direction \texttt{angle} (in degrees). Note that pulley's support protrudes from its center by \texttt{4/3radius}.
+
+\begin{lstlisting}
+beginfig(8)
+    draw (-1/8cm, 0)--(12cm, 0);
+    for i := 1 step 1 until 6:
+        r := 1/7cm*i;
+        draw image(
+            draw pulley(2r, 0) shifted (0, -4/3r);
+            draw (r, -4/3r) -- (r, -2cm);
+            drawarrow (-r, -4/3r) -- (-r, -2cm);
+        ) shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+endfig;
+\end{lstlisting}
+
+\noindent\begin{emp}(1cm, 1cm)
+beginfig(8)
+    draw (-1/8cm, 0)--(12cm, 0);
+    for i := 1 step 1 until 6:
+        r := 1/7cm*i;
+        draw image(
+            draw pulley(2r, 0) shifted (0, -4/3r);
+            draw (r, -4/3r) -- (r, -2cm);
+            drawarrow (-r, -4/3r) -- (-r, -2cm);
+        ) shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+endfig;
+\end{emp}
+
+\subsection{pulleyOutline (\emph{radius, angle})}
+This macro returns outline of a pulley that can be used to mask objects behind it.
+
+
+\subsection{wheel (\emph{radius, angle})}
+This macro returns a \texttt{picture} of a wheel with specified \texttt{radius} and its support pointed at the direction \texttt{angle} (in degrees).
+
+\begin{lstlisting}
+beginfig(9)
+    draw (-1/8cm, 0)--(12cm, 0);
+    for i := 1 step 1 until 6:
+        r := 1/7cm*i;
+        draw wheel(2r, 0) shifted (0, -r) shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+endfig;
+\end{lstlisting}
+
+\noindent\begin{emp}(1cm, 1cm)
+beginfig(9)
+    draw (-1/8cm, 0)--(12cm, 0);
+    for i := 1 step 1 until 6:
+        r := 1/7cm*i;
+        draw wheel(2r, 0) shifted (0, -r) shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+endfig;
+\end{emp}
+
+
+\subsection{weight.s (\emph{height})}
+This macro draws a kind of weight of a specific \texttt{height} that is standing on the point \texttt{(0, 0)}.
+
+\begin{lstlisting}
+beginfig(10)
+    for i := 1 step 1 until 6:
+        draw weight.s(1/4cm + i*1/4cm) shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+    draw (-1/8cm, 0)--(12cm, 0);
+endfig;
+\end{lstlisting}
+
+\noindent\begin{emp}(1cm, 1cm)
+beginfig(10)
+    for i := 1 step 1 until 6:
+        draw weight.s(1/4cm + i*1/4cm) shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+    draw (-1/8cm, 0)--(12cm, 0);
+endfig;
+\end{emp}
+
+\subsection{weight.h (\emph{height})}
+This macro draws a kind of weight of a specific \texttt{height} that is is hanging from the point \texttt{(0, 0)}.
+
+\begin{lstlisting}
+beginfig(11)
+    for i := 1 step 1 until 6:
+        draw weight.h(1/4cm + i*1/4cm) shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+    draw (12cm, 0)--(-1/8cm, 0);
+endfig;
+\end{lstlisting}
+
+\noindent\begin{emp}(1cm, 1cm)
+beginfig(11)
+    for i := 1 step 1 until 6:
+        draw weight.h(1/4cm + i*1/4cm) shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+    draw (12cm, 0)--(-1/8cm, 0);
+endfig;
+\end{emp}
+
+
+\subsection{spring (\emph{point a, point b, number of steps})}
+This macro returns a \texttt{picture} of a spring stretched between points \texttt{a} and \texttt{b} (of type \texttt{pair}), with specified \texttt{number of steps}. Spring width is controlled by global variable \texttt{springwidth} with the default value \texttt{springwidth := 1/8cm;}.
+
+\begin{lstlisting}
+beginfig(12)
+    pair a, b;
+    a := (0, 0);
+    for i := 1 step 1 until 6:
+        springwidth := 1/16cm + i*1/48cm;
+        b := (i*1/3cm, - i*1/5cm);
+        draw spring (a, b, 10) shifted (2/5cm*(i*(i+1))/2, 0);
+    endfor;
+endfig;
+\end{lstlisting}
+
+\noindent\begin{emp}(1cm, 1cm)
+beginfig(12)
+    pair a, b;
+    a := (0, 0);
+    for i := 1 step 1 until 6:
+        springwidth := 1/16cm + i*1/48cm;
+        b := (i*1/3cm, - i*1/5cm);
+        draw spring (a, b, 10) shifted (2/5cm*(i*(i+1))/2, 0);
+    endfor;
+endfig;
+\end{emp}
+
+\subsection{solidSurface (\emph{path})}
+This macro returns a \texttt{picture} of a solid surface on the right of \texttt{path}.
+
+\begin{lstlisting}
+beginfig(13)
+    path p;
+    p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
+    draw solidSurface(p);
+endfig;
+\end{lstlisting}
+
+\noindent\begin{emp}(1cm, 1cm)
+beginfig(13)
+    path p;
+    p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
+    draw solidSurface(p);
+endfig;
+\end{emp}
+
+\subsection{solid (\emph{path, angle, type})}
+Fills given \texttt{path} with strokes of specific type at a given \texttt{angle}. \texttt{type} can be 0 (``solid'' strokes) and 1 (``glass'' strokes).
+
+\subsection{woodBlock (\emph{width, height})}
+Draws a rectangular block of wood with its bottom-left corner in the origin.
+
+\begin{lstlisting}
+beginfig(14)
+    draw woodBlock(10cm, 1/2cm);
+endfig;
+\end{lstlisting}
+
+\noindent\begin{emp}(1cm, 1cm)
+beginfig(14)
+    draw woodBlock(10cm, 1/2cm);
+endfig;
+\end{emp}
+\subsection{globe (\emph{radius, longitude, latitude})}
+This macro returns a \texttt{picture} of the globe of specified \texttt{radius} centered at specific \texttt{longitude} and \texttt{latitude};
+
+\begin{lstlisting}
+beginfig(15)
+    for i := 1 step 1 until 6:
+        draw globe(i*1/4cm, i*60, -90 + i*30)
+         shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+endfig;
+\end{lstlisting}
+
+\noindent\begin{emp}(1cm, 1cm)
+beginfig(15)
+    for i := 1 step 1 until 6:
+        draw globe(i*1/4cm, i*60, -90 + i*30)
+         shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+endfig;
+\end{emp}
+
+\section{Other macros}
+Some macros that are not directly related to drawing are listed below
+
+\subsection{refractionPath (\emph{initial ray, shape, refraction coefficient})}
+This macro returns a path that represent refraction of some \texttt{ray} (any variable of type  \texttt{path}, point next to last in a given path is considered a source of a ``ray'', and last point determines its direction) through some  \texttt{shape} with given \texttt{refraction coefficient}. In case it happens, ``ray'' is fully internally reflected.
+
+Setting \texttt{refraction coefficient} to 0 results in reflection instead of refraction.
+
+\begin{lstlisting}
+beginfig(16)
+    path r, p;
+    p := fullcircle scaled 2.1cm;
+    draw p;
+    for i:= 1cm step -1/4cm until -1cm:
+        r := (-4cm, i) -- (-1cm, i);
+        draw refractionPath(r, p, 1.5);
+    endfor;
+endfig;
+\end{lstlisting}
+
+\noindent\begin{emp}(1cm, 1cm)
+beginfig(16)
+    path r, p;
+    p := fullcircle scaled 2.1cm;
+    draw p;
+    for i:= 1cm step -1/4cm until -1cm:
+        r := (-4cm, i) -- (-1cm, i);
+        draw refractionPath(r, p, 1.5);
+    endfor;
+endfig;
+\end{emp}
+
+
+\subsection{lens (\emph{(left radius, right radius), thickness, diameter, units})}
+This macro returns a path that represent a section of a lens with given radii of curvature (positive value for convex, negative --- for concave), thickness (i. e. distance benween sides' centers) and diameter (i. e. height) in given arbitrary units.
+
+\begin{lstlisting}
+beginfig(17)
+    draw lens((5, 10), 1/2, 2, cm);
+    draw lens((-10, -5), 1/4, 2, cm) shifted (2cm, 0);
+    draw lens((infinity, 7), 1/4, 2, cm) shifted (4cm, 0);
+endfig;
+\end{lstlisting}
+
+\noindent\begin{emp}(1cm, 1cm)
+beginfig(17)
+    draw lens((5, 10), 1/2, 2, cm);
+    draw lens((-10, -5), 1/4, 2, cm) shifted (2cm, 0);
+    draw lens((infinity, 7), 1/4, 2, cm) shifted (4cm, 0);
+endfig;
+\end{emp}
+
+\section{Auxilary macros}
+Some macros not related to physical problems at all are listed below.
+
+\subsection{\emph{picture} maskedWith \emph{path}}
+This macro masks a part of a \texttt{picture} with closed \texttt{path}. In fact this is inversion of metapost's built-in \texttt{clip} but, in contrast to the latter, it does not modify original image. Note that it requires that counter-clockwise \texttt{path} to work properly.
+
+\subsection{\emph{path} firstIntersectionTimes \emph{path}}
+This macro is similar to metapost's \texttt{intersectiontimes} but it returns intersection times with smallest time on first path.
+
+\subsection{pathSubdivide \emph{path, n}}
+This macro returns original \texttt{path} with \texttt{n}-times more points.
+
+\subsection{drawmidarrow (\emph{path})}
+Draws \texttt{path} with arrows in the middles of segments with length no less than  \texttt{midArrowLimit} (another global variable, 1cm by default).
+
+\subsection{markAngle (\emph{point a, point o, point b})(\emph{text})}
+This macro marks an angle \texttt{aob} (counter-clockwise) with some \texttt{text}
+
+
+\begin{lstlisting}
+beginfig(18)
+    pair a, o, b;
+    for i:= 30 step 60 until 390:
+        o := (10cm*(i/360), 0);
+        a := dir(i/2)*4/3cm shifted o;
+        b := dir(i)*4/3cm shifted o;
+        draw (a--o--b);
+        markAngle(a, o, b)(btex $\alpha$ etex);
+    endfor;
+endfig;\end{lstlisting}
+
+\noindent\begin{emp}(1cm, 1cm)
+beginfig(18)
+    pair a, o, b;
+    for i:= 30 step 60 until 390:
+        o := (10cm*(i/360), 0);
+        a := dir(i/2)*4/3cm shifted o;
+        b := dir(i)*4/3cm shifted o;
+        draw (a--o--b);
+        markAngle(a, o, b)(btex $\alpha$ etex);
+    endfor;
+endfig;
+\end{emp}
+
+
+\section{Some examples}
+
+\subsection{Gregory-Maksutov type telescope}
+Lines 4--11 define parameters of lenses and mirrors\footnote{Taken from here http://www.google.ru/patents/US2701983}. Lines 12--17 generate lenses. On line 21 shape of prism is defined. Line 23 cuts part of the rear mirror. Line 27 describes mirror part of the front lens. On lines 32--34 all the glass parts are drawn. On lines 35--37 all the mirror ones. On lines 40--45 rays are traced through all system in order specified in loop on line 42. Lines 50--57 are about telescope frame.
+\begin{lstlisting}
+beginfig(19)
+    path p[], q[], axis[], f[]; pair o;
+    u := 6mm;
+    r1 := -36.979; r2 := -r1; t1 := 0.7; n1 := 1.517; d1 := 5;
+    l1 := 8.182;
+    r3 := -11.657; r4 := r3; t2 := 0.2; n2 := n1; d2 := 3/2;
+    l2 := 0.4;
+    r5 := -30.433; r6 := 9.598; t3 := 0.39; n3 := 1.621; d3 := d2;
+    l3 := 0.828;
+    r7 := -35.512; r8 := infinity; t4 := 0.7; n4 := 0; d4 := d1;
+    l4 := 5.272;
+    ll0 := 0;
+    for i := 1 upto 4:
+    	ll[i] := ll[i-1] + t[i] + l[i];
+    	p[i] := lens ((r[i*2 - 1], r[i*2]), t[i], d[i], u) 
+	        shifted (ll[i-1]*u, 0);
+    endfor;
+    axis1 := (0, 0) -- (ll4*u, 0);
+    axis2 := reverse(axis1);
+    ll5 := ll4 - 1/2l4;
+    p5 :=  ((-1,-1) -- (1,1) -- (-1,1) -- cycle)
+          scaled (1/2d2*u) shifted (ll5*u, 0);
+    p6 := (subpath 
+        (ypart((axis1 shifted (0, 1/2d2*u)) firstIntersectionTimes p4), 
+        ypart((axis2 shifted (0, 1/2d2*u)) firstIntersectionTimes p4))
+        of p4) -- cycle;
+    p7 := (subpath 
+        (ypart((axis2 shifted (0, 3/4d2*u)) firstIntersectionTimes p1), 
+        ypart((axis2 shifted (0, -3/4d2*u)) firstIntersectionTimes p1))
+        of p1);
+    p7 := p7 -- (reverse(p7) shifted ((-1/3t1)*u, 0)) -- cycle;
+    for i := 1, 2, 3, 5: 
+        draw p[i] withpen thickpen; draw solid (p[i], 45, 1); 
+    endfor;
+    draw solid (p7, -45, 0);
+    draw p6 withpen thickpen; draw solid (p6, -45, 0);
+    draw p6 yscaled -1 withpen thickpen;
+    draw solid (p6 yscaled -1, -45, 0);
+    n7 := 0; n5 := n1;
+    for i := 0, 1:
+        q[i] := (-3/2u, -2u + i*4u) -- (16u, -2u + i*4u);
+        for j = 1, 4, 7, 2, 3, 5: 
+            q[i] := refractionPath(q[i], p[j], n[j]);
+        endfor;
+    endfor;
+        o := whatever[point length(q0) of q0, point length(q0)-1 of q0] 
+           = whatever[point length(q1) of q1, point length(q1)-1 of q1];
+    for i := 0, 1: drawmidarrow (q[i] -- o) withpen thinpen; endfor;
+    draw eye(-91) shifted o shifted (0, u);
+    f1 := (-1/4u, 1/2d1*u) -- ((ll3 + t4)*u, 1/2d1*u)
+          -- ((ll3 + t4)*u, 1/2d2*u);
+    f2 := (ll1*u - 1/8u, 1/2d2*u) -- (ll5*u - 1/2d2*u, 1/2d2*u)
+          -- (ll5*u - 1/2d2*u, ypart(o));
+    f3 := (ll1*u - 1/8u, -1/2d2*u) -- (ll5*u + 1/2d2*u, -1/2d2*u)
+          -- (ll5*u + 1/2d2*u, ypart(o));
+    draw f1 withpen fatpen; draw f1 yscaled -1 withpen fatpen;
+    draw f2 withpen fatpen; draw f3 withpen fatpen;
+endfig;
+\end{lstlisting}
+
+\noindent\begin{emp}(1cm, 1cm)
+beginfig(19)
+    path p[], q[], axis[], f[]; pair o;
+    u := 6mm;
+    r1 := -36.979; r2 := -r1; t1 := 0.7; n1 := 1.517; d1 := 5;
+    l1 := 8.182;
+    r3 := -11.657; r4 := r3; t2 := 0.2; n2 := n1; d2 := 3/2;
+    l2 := 0.4;
+    r5 := -30.433; r6 := 9.598; t3 := 0.39; n3 := 1.621; d3 := d2;
+    l3 := 0.828;
+    r7 := -35.512; r8 := infinity; t4 := 0.7; n4 := 0; d4 := d1;
+    l4 := 5.272;
+    ll0 := 0;
+    for i := 1 upto 4:
+    	ll[i] := ll[i-1] + t[i] + l[i];
+    	p[i] := lens ((r[i*2 - 1], r[i*2]), t[i], d[i], u) 
+	        shifted (ll[i-1]*u, 0);
+    endfor;
+    axis1 := (0, 0) -- (ll4*u, 0);
+    axis2 := reverse(axis1);
+    ll5 := ll4 - 1/2l4;
+    p5 :=  ((-1,-1) -- (1,1) -- (-1,1) -- cycle)
+          scaled (1/2d2*u) shifted (ll5*u, 0);
+    p6 := (subpath 
+        (ypart((axis1 shifted (0, 1/2d2*u)) firstIntersectionTimes p4), 
+        ypart((axis2 shifted (0, 1/2d2*u)) firstIntersectionTimes p4))
+        of p4) -- cycle;
+    p7 := (subpath 
+        (ypart((axis2 shifted (0, 3/4d2*u)) firstIntersectionTimes p1), 
+        ypart((axis2 shifted (0, -3/4d2*u)) firstIntersectionTimes p1))
+        of p1);
+    p7 := p7 -- (reverse(p7) shifted ((-1/3t1)*u, 0)) -- cycle;
+    for i := 1, 2, 3, 5: 
+        draw p[i] withpen thickpen; draw solid (p[i], 45, 1); 
+    endfor;
+    draw solid (p7, -45, 0);
+    draw p6 withpen thickpen; draw solid (p6, -45, 0);
+    draw p6 yscaled -1 withpen thickpen;
+    draw solid (p6 yscaled -1, -45, 0);
+    n7 := 0; n5 := n1;
+    for i := 0, 1:
+        q[i] := (-3/2u, -2u + i*4u) -- (16u, -2u + i*4u);
+        for j = 1, 4, 7, 2, 3, 5: 
+            q[i] := refractionPath(q[i], p[j], n[j]);
+        endfor;
+    endfor;
+        o := whatever[point length(q0) of q0, point length(q0)-1 of q0] 
+           = whatever[point length(q1) of q1, point length(q1)-1 of q1];
+    for i := 0, 1: drawmidarrow (q[i] -- o) withpen thinpen; endfor;
+    draw eye(-91) shifted o shifted (0, u);
+    f1 := (-1/4u, 1/2d1*u) -- ((ll3 + t4)*u, 1/2d1*u)
+          -- ((ll3 + t4)*u, 1/2d2*u);
+    f2 := (ll1*u - 1/8u, 1/2d2*u) -- (ll5*u - 1/2d2*u, 1/2d2*u)
+          -- (ll5*u - 1/2d2*u, ypart(o));
+    f3 := (ll1*u - 1/8u, -1/2d2*u) -- (ll5*u + 1/2d2*u, -1/2d2*u)
+          -- (ll5*u + 1/2d2*u, ypart(o));
+    draw f1 withpen fatpen; draw f1 yscaled -1 withpen fatpen;
+    draw f2 withpen fatpen; draw f3 withpen fatpen;
+endfig;
+\end{emp}
+
+\subsection{L'H\^{o}pital's Pulley Problem}
+Line 4 describe initial setup. Line 5 is problem's solution. Lines 9--12 set all the points where they belong. Lines 13--16 are needed to decide where to put the pulley.
+
+\begin{lstlisting}
+beginfig(20)
+    pair p[], o[];
+    numeric a, d[], l[], x[], y[];
+    l0 := 6; l1 := 4; l2 := 4;
+    x1 := (l1**2 + abs(l1)*((sqrt(8)*l0)++l1))/4l0;
+    y1 := l1+-+x1;
+    y2 := l2 - ((l0-x1)++y1);
+    d1 := 2/3cm; d2 := 4/3cm; d3 := 5/6d1;
+    p1 := (0, 0);
+    p2 := (l0*cm, 0);
+    p3 := (x1*cm, -y1*cm);
+    p4 := p3 shifted (0, -y2*cm);
+    o1 := (unitvector(p4-p3) rotated 90 scaled 1/2d3);
+    o2 := (unitvector(p3-p2) rotated 90 scaled 1/2d3);
+    p5 := whatever [p3 shifted o1, p4 shifted o1] 
+        = whatever [p3 shifted o2, p2 shifted o2];
+    a := angle(p1-p3);
+    draw solidSurface(11/10[p2,p1] -- 11/10[p1, p2]);
+    draw image(
+        draw p1 -- p3 -- p2 withpen thickpen; 
+        draw p3 -- p4 withpen thickpen;
+    ) maskedWith (pulleyOutline (d1, a - 90) shifted p5);
+    draw pulley (d1, a - 90) shifted p5;
+    draw sphere.c(d2) shifted p4 shifted (0, -1/2d2);
+    dotlabel.llft(btex $A$ etex, p1);
+    dotlabel.lrt(btex $B$ etex, p2);
+    dotlabel.ulft(btex $C$ etex, p4);
+    label.llft(btex $l$ etex, 1/2[p1, p3]);
+    markAngle(p3, p1, p2)(btex $\alpha$ etex);
+endfig;
+\end{lstlisting}
+
+\noindent\begin{emp}(1cm, 1cm)
+beginfig(20)
+    pair p[], o[];
+    numeric a, d[], l[], x[], y[];
+    l0 := 6; l1 := 4; l2 := 4;
+    x1 := (l1**2 + abs(l1)*((sqrt(8)*l0)++l1))/4l0;
+    y1 := l1+-+x1;
+    y2 := l2 - ((l0-x1)++y1);
+    d1 := 2/3cm; d2 := 4/3cm; d3 := 5/6d1;
+    p1 := (0, 0);
+    p2 := (l0*cm, 0);
+    p3 := (x1*cm, -y1*cm);
+    p4 := p3 shifted (0, -y2*cm);
+    o1 := (unitvector(p4-p3) rotated 90 scaled 1/2d3);
+    o2 := (unitvector(p3-p2) rotated 90 scaled 1/2d3);
+    p5 := whatever [p3 shifted o1, p4 shifted o1] 
+        = whatever [p3 shifted o2, p2 shifted o2];
+    a := angle(p1-p3);
+    draw solidSurface(11/10[p1,p2] -- 11/10[p2, p1]);
+    draw image(
+        draw p1 -- p3 -- p2 withpen thickpen; 
+        draw p3 -- p4 withpen thickpen;
+    ) maskedWith (pulleyOutline (d1, a - 90) shifted p5);
+    draw pulley (d1, a - 90) shifted p5;
+    draw sphere.c(d2) shifted p4 shifted (0, -1/2d2);
+    dotlabel.llft(btex $A$ etex, p1);
+    dotlabel.lrt(btex $B$ etex, p2);
+    dotlabel.ulft(btex $C$ etex, p4);
+    label.llft(btex $l$ etex, 1/2[p1, p3]);
+    markAngle(p3, p1, p2)(btex $\alpha$ etex);
+endfig;
+\end{emp}
+
+\subsection{Hooke's law}
+
+\begin{lstlisting}
+beginfig(21)
+    numeric l[],d, h;
+    pair p[], q[];
+    l0 := 3/2cm; l1 := 1cm;
+    d := 1cm; h := 7/8cm;
+    p1 := (0, 0); p2 := (0, -l0);
+    p3 := (d, 0); p4 := (d, -l0-l1);
+    p5 := (2d, 0); p6 := (2d, -l0-2l1); p7 := (2d, -l0-2l1-h);
+    draw solidSurface((2d + 1/2cm, 0)--(-1/2cm, 0));
+    draw spring(p1, p2, 20);
+    draw spring(p3, p4, 20);
+    draw weight.h(h) shifted p4;
+    draw spring(p5, p6, 20);
+    draw weight.h(h) shifted p6;
+    draw weight.h(h) shifted p7;
+    q1 := (0, ypart(p2));
+    q2 := (0, ypart(p4));
+    q3 := (0, ypart(p6));
+    draw p2 -- q1 withpen thinpen;
+    draw p4 -- q2 withpen thinpen;
+    draw p6 -- q3 withpen thinpen;
+    drawdblarrow q1--q2 withpen thinpen;
+    drawdblarrow q2--q3 withpen thinpen;
+    label.lft (btex $x$ etex, 1/2[q1, q2]);
+    label.lft (btex $x$ etex, 1/2[q2, q3]);
+endfig;
+\end{lstlisting}
+
+\noindent\begin{emp}(1cm, 1cm)
+beginfig(21)
+    numeric l[],d, h;
+    pair p[], q[];
+    l0 := 3/2cm; l1 := 1cm;
+    d := 1cm; h := 7/8cm;
+    p1 := (0, 0); p2 := (0, -l0);
+    p3 := (d, 0); p4 := (d, -l0-l1);
+    p5 := (2d, 0); p6 := (2d, -l0-2l1); p7 := (2d, -l0-2l1-h);
+    draw solidSurface((2d + 1/2cm, 0)--(-1/2cm, 0));
+    draw spring(p1, p2, 20);
+    draw spring(p3, p4, 20);
+    draw weight.h(h) shifted p4;
+    draw spring(p5, p6, 20);
+    draw weight.h(h) shifted p6;
+    draw weight.h(h) shifted p7;
+    q1 := (0, ypart(p2));
+    q2 := (0, ypart(p4));
+    q3 := (0, ypart(p6));
+    draw p2 -- q1 withpen thinpen;
+    draw p4 -- q2 withpen thinpen;
+    draw p6 -- q3 withpen thinpen;
+    drawdblarrow q1--q2 withpen thinpen;
+    drawdblarrow q2--q3 withpen thinpen;
+    label.lft (btex $x$ etex, 1/2[q1, q2]);
+    label.lft (btex $x$ etex, 1/2[q2, q3]);
+endfig;
+\end{emp}
+
+\subsection{Klein bottle}
+
+\begin{lstlisting}
+beginfig(22)
+    path p;
+    p := (0, 0){dir(90)} .. (-1/3cm, 3/2cm) 
+         .. (0, 7/2cm) .. (3/2cm, 2cm) .. {dir(-90)}(0, 0);
+    p := pathSubdivide(p, 6);
+    vardef oplmod (expr x) = 2*(x**3/4) enddef;
+    draw tube.l(p)(
+       (1/4 
+       + (
+               (
+                   (sqrt(1-(oplmod(offsetPathLength) - 1)**2) - 1)
+                   *(1-oplmod(offsetPathLength))
+               ) - oplmod(offsetPathLength)
+           )/7
+       )*6cm
+    );
+endfig;
+\end{lstlisting}
+
+\noindent\begin{emp}(1cm, 1cm)
+beginfig(22)
+    path p;
+    p := (0, 0){dir(90)} .. (-1/3cm, 3/2cm) 
+         .. (0, 7/2cm) .. (3/2cm, 2cm) .. {dir(-90)}(0, 0);
+    p := pathSubdivide(p, 6);
+    vardef oplmod (expr x) = 2*(x**3/4) enddef;
+    draw tube.l(p)(
+       (1/4 
+       + (
+               (
+                   (sqrt(1-(oplmod(offsetPathLength) - 1)**2) - 1)
+                   *(1-oplmod(offsetPathLength))
+               ) - oplmod(offsetPathLength)
+           )/7
+       )*6cm
+    );
+endfig;
+\end{emp}
+
+\subsection{Weight on a cart}
+
+\begin{lstlisting}
+beginfig(23)
+    numeric l, w, r,  h;
+    l := 4cm;
+    w := 1/4cm;
+    r := 2/3cm;
+    h := 1cm;
+    draw solidSurface((-1/5l, 0) -- (6/5l, 0));
+    draw woodBlock (l, w) shifted (0, r);
+    draw wheel (r, 0) shifted (r, 1/2r);
+    draw wheel (r, 0) shifted (l-r, 1/2r);
+    draw weight.s(h) shifted (1/2l, r + w);
+endfig;
+\end{lstlisting}
+
+\noindent\begin{emp}(1cm, 1cm)
+beginfig(23)
+    numeric l, w, r,  h;
+    l := 4cm;
+    w := 1/4cm;
+    r := 2/3cm;
+    h := 1cm;
+    draw solidSurface((-1/5l, 0) -- (6/5l, 0));
+    draw woodBlock (l, w) shifted (0, r);
+    draw wheel (r, 0) shifted (r, 1/2r);
+    draw wheel (r, 0) shifted (l-r, 1/2r);
+    draw weight.s(h) shifted (1/2l, r + w);
+endfig;
+\end{emp}
+
+
+
+\end{empfile}
+\end{document}
