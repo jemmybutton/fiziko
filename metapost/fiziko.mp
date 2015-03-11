@@ -1291,7 +1291,7 @@ begingroup
         q3 := offsetPathGenerate (q0, q1 yscaled -1, 0);
         tubeGenerateAlt (q2, q3, q1);
         draw q3 -- reverse(q2) withpen thinpen;
-        q5 := point 0 of q3 -- point 0 of q2;
+        q5 := offsetPathSubdivide(point 0 of q3 -- point 0 of q2);
         q6 := tubeOutline((0,0) -- (0, -3/2auricle.t))(1/2auricle.t);
         draw image(
             q4 := (((0, -1/2) {dir(90)} .. (1/2, 1/2) .. (0, 1) .. {dir(-90)}(-1/2, 1/4)) shifted (0, -1)) scaled 2/3auricle.d;
@@ -1413,12 +1413,12 @@ begingroup
             endfor;
             draw brush (fullcircle scaled r1)(minStrokeWidth);
             draw brush (fullcircle scaled r2)(minStrokeWidth);
-            draw shadedEdge (fullcircle scaled d);
+            draw fullcircle scaled d withpen thinpen;
         );
     else:
         pc1 := image(
             draw shadedEdge (reverse(fullcircle) scaled r1);
-            draw shadedEdge (fullcircle scaled d);
+            draw fullcircle scaled d withpen thinpen;
         )
     fi;
     image(
@@ -1426,7 +1426,7 @@ begingroup
     p1 := (p1 --  (xpart(point 0 of reverse(p1)), 2/3d) --  (xpart(point 0 of p1), 2/3d) -- cycle) rotated a;
     pc1 := pc1 maskedWith p1;
     draw pc1;
-    draw shadedEdge(p1);
+    draw p1 withpen thinpen;
     draw shadedEdge(reverse(fullcircle) scaled r4);
     )
 endgroup
