@@ -333,7 +333,7 @@ begingroup
         if (w2 > minStrokeWidth):
             w2 := minStrokeWidth;
         fi;
-        if (w2 >= minDashStrokeWidth):
+        if (w2 >= minDashStrokeWidth) and (arclength(p) > 0):
             draw p withpen thinpen dashed thinBrushPattern(w2, arclength(p));
         fi;
     fi;
