@@ -34,6 +34,14 @@ vardef angleRad primary x = angle(x)/radian enddef;
 
 vardef dirRad primary x = dir(x*radian) enddef;
 
+% used here and there.
+
+vardef sign (expr x)=
+    if x > 0: 1 fi
+    if x < 0: -1 fi
+    if x = 0: 1 fi
+enddef;
+
 % This is inverted `clip`
 
 primarydef i maskedWith p =
@@ -80,6 +88,7 @@ enddef;
 %
 % sometimes it's useful to put some arrows along the path. this macro puts them
 % in the middles of the segments that have length no less than midArrowLimit;
+%
 
 midArrowLimit := 1cm;
 
@@ -97,6 +106,29 @@ begingroup
         fi;
     endfor;
     draw subpath(j, length(p)) of p t;
+endgroup
+enddef;
+
+% This macro marks angles, surprisingly
+
+def markAngle (expr a, o, b) (text t) =
+begingroup
+    save p, an, d;
+    numeric an[], d[];
+    pair p;
+    an1 := angle(a-o);
+    an2 := angle(b-o) - an1;
+    if (an2 < 0): an2 := an2 + 360; fi;
+    an3 := an1 + 1/2an2;
+    p := center(t);
+    d1 := abs(ulcorner(t)-lrcorner(t));
+    if (an2 < 90) and (an2 > 0):
+        d2 := max(1/3cm, (d1/(abs(sind(an2))*1/3cm))*1/3cm);
+    else:
+        d2 := 1/3cm;
+    fi;
+    draw subpath (0, 8an2/360) of fullcircle scaled 2d2 rotated an1 shifted o withpen thinpen;
+    draw (t) shifted -p shifted o shifted (dir(an3)*(d2 + d1));
 endgroup
 enddef;
 
@@ -404,7 +436,6 @@ begingroup
 endgroup
 enddef;
 
-
 %
 % This macro generates tube between paths p and q, of variable width d
 % Tube is subdivided into segments in such a way that within every segment
@@ -449,7 +480,6 @@ begingroup
     fi;
 endgroup
 enddef;
-
 
 %
 % This macro is analogous to tubeGenerate, but draws transverse strokes
@@ -510,7 +540,6 @@ begingroup
     endfor;
 endgroup
 enddef;
-
 
 %
 % This macro converts some measurements of point on tube to absolute angle.
@@ -623,7 +652,6 @@ begingroup
 endgroup
 enddef;
 
-
 %
 % Alternative sphere macro. It's all about latitudinal strokes.
 % The idea is: when we have a sphere with evenly distributed parallel strokes
@@ -664,7 +692,7 @@ begingroup
                 else:
                     p1 := p0;
                 fi;
-                if (x > -1):
+                if (x > -1) and (arclength(p1) > 0):
                     currentPath := (p1 scaled (d*sin(sphlat)) yscaled sind(lat)) shifted (0, 1/2d*cos(sphlat)*cosd(lat));
                     currentPath := offsetPathSubdivide(currentPath);
                     thinBrushGenerate(currentPath,
@@ -861,6 +889,118 @@ enddef;
 
 vardef refractionPath (expr sa, p, n) =
     refractionPathR(sa, p, n, 0, 10)
+enddef;
+
+%
+% These macros are for isolines. cLine draws continuous line and is called by isoLines.
+% For now they are only used to draw wood texture, but can be used elsewhere
+%
+
+%
+% isoLines goes through i by j matrix of nodes (xy), looking for square, that has some of it's
+% angles below zero and some - above, when found, it calls cLine, that tries to build segment of
+% isoline, that happen to go through abovementioned square. Thickness of line is
+% controlled by values in v array.
+% All squares with lines already drawn through are ignored.
+%
+
+vardef isoLines (suffix xy)(expr cs, l, s) =
+begingroup
+    save xxyy, i, j, c, v, sqB, iL, lvl;
+    numeric xxyy[][], c[], v[], sqB, sqbM;
+    lvl := l;
+    path iL;
+    image(
+        for i := 0 step 1 until xpart(cs) - 1:
+            for j := 0 step 1 until ypart(cs) - 1:
+                if (unknown xxyy[i][j]):
+                    c1 := xy[i][j]+lvl;
+                    c2 := xy[i][j+1]+lvl;
+                    c3 := xy[i+1][j]+lvl;
+                    c4 := xy[i+1][j+1]+lvl;
+                    sqB := 0;
+                    sqBm := 0;
+                    if (abs(sign(c1)+sign(c2)+sign(c3)+sign(c4)) < 4):
+                        iL := cLine (xy)((i, j), (0, 0), 0, cs) scaled s;
+                        brushGenerate (reverse(iL),
+                        offsetPathTemplate(iL, 0)(
+                        1/16minStrokeWidth/((1/64 + 2(if (offsetPathTime < length(iL) - 1): (offsetPathTime - floor(offsetPathTime))[v[floor(sqB + offsetPathTime)], v[ceiling(sqB + offsetPathTime)]] else: 1 fi)))
+                        )
+                        , 0);
+                    fi;
+                fi;
+            endfor;
+        endfor;
+        draw (0,0);
+    )
+endgroup
+enddef;
+
+% cLine tries to generate continouos segment of an isoline
+
+vardef cLine (suffix xy)(expr ij, dr, st, cs) =
+begingroup
+    save p, d, dd, n, i, j, k, outputPath, sqS, cp, dp, nd;
+    pair p[], d[], dd[], cp[], dp[];
+    path outputPath;
+    i := xpart(ij);
+    j := ypart(ij);
+    sqS := 0;
+    if (i >= 0) and (i <= xpart(cs)-1) and (j >= 0) and (j <= ypart(cs)-1):
+        n := 0;
+        c1 := xy[i][j] + lvl; d1:= (i, j);
+        c2 := xy[i][j+1] + lvl; d2:= (i, j+1);
+        c3 := xy[i+1][j] + lvl; d3:= (i+1, j);
+        c4 := xy[i+1][j+1] + lvl; d4:= (i+1, j+1);
+        cp1 := (1, 2); dp1 := (-1, 0);
+        cp2 := (1, 3); dp2 := (0, -1);
+        cp3 := (2, 4); dp3 := (0, 1);
+        cp4 := (3, 4); dp4 := (1, 0);
+        for k := 1 upto 4:
+            c5 := c[xpart(cp[k])]; d5 := d[xpart(cp[k])];
+            c6 := c[ypart(cp[k])]; d6 := d[ypart(cp[k])];
+            if (sign(c5)) <> (sign(c6)):
+                n := n + 1;
+                p[n] := (abs(-c5/(c6-c5)))[d5, d6];
+                dd[n] := dp[k];
+            fi;
+        endfor;
+        sqS := max(c1, c2, c3, c4) - min(c1, c2, c3, c4);
+        if (unknown xxyy[i][j]):
+            xxyy[i][j] := 1;
+            if (dr = (0, 0)):
+                outputPath := cLine (xy)(ij shifted dd2, dd2, st + 1,cs) -- p1 -- p2 -- cLine (xy)(ij shifted dd1, dd1, st - 1,cs);
+            else:
+                nd := 0;
+                if (unknown(xxyy[i + xpart(dd1)][j + ypart(dd1)])):
+                    nd := 1;
+                elseif (unknown(xxyy[i + xpart(dd2)][j + ypart(dd2)])):
+                    nd := 2;
+                fi;
+                if nd > 0:
+                    outputPath := cLine (xy)(ij shifted dd[nd], dd[nd], st + sign(st),cs);
+                    p3 := p[nd];
+                    if (st > 0):
+                        outputPath := outputPath -- p3;
+                    else:
+                        outputPath := p3 -- outputPath;
+                    fi;
+                else:
+                    outputPath := 1/2[p1, p2];
+                fi;
+            fi;
+        else:
+            outputPath := 1/2[p1, p2];
+        fi;
+    else:
+        outputPath := (i, j);
+        xxyy[i][j] := 1;
+    fi;
+    if (st < sqB): sqB := st; fi;
+    if (st > sqBm): sqBm := st; fi;
+    v[st] := sqS;
+    outputPath
+endgroup
 enddef;
 
 %
@@ -1165,6 +1305,10 @@ begingroup
 endgroup
 enddef;
 
+%
+% Returns a picture of shaded gradient inside shape p at an angle a
+%
+
 vardef gradientShade (expr p, a) =
 begingroup
     save stripes, stripeshd, d, i, j, s;
@@ -1377,6 +1521,11 @@ begingroup
 endgroup
 enddef;
 
+%
+% This one returns a picture of a pulley with diameter d and it's support rotated
+% at angle a
+%
+
 vardef pulley (expr d, a) =
 begingroup
     save pc, p, r, i;
@@ -1444,6 +1593,10 @@ begingroup
 endgroup
 enddef;
 
+%
+% This macro draws a wheel
+%
+
 vardef wheel (expr d, a) =
 begingroup
     save pc, p, r, i;
@@ -1490,34 +1643,9 @@ begingroup
 endgroup
 enddef;
 
-% This macro marks angles, surprisingly
-
-def markAngle (expr a, o, b) (text t) =
-begingroup
-    save p, an, d;
-    numeric an[], d[];
-    pair p;
-    an1 := angle(a-o);
-    an2 := angle(b-o) - an1;
-    if (an2 < 0): an2 := an2 + 360; fi;
-    an3 := an1 + 1/2an2;
-    p := center(t);
-    d1 := abs(ulcorner(t)-lrcorner(t));
-    if (an2 < 90) and (an2 > 0):
-        d2 := max(1/3cm, (d1/(abs(sind(an2))*1/3cm))*1/3cm);
-    else:
-        d2 := 1/3cm;
-    fi;
-    draw subpath (0, 8an2/360) of fullcircle scaled 2d2 rotated an1 shifted o withpen thinpen;
-    draw (t) shifted -p shifted o shifted (dir(an3)*(d2 + d1));
-endgroup
-enddef;
-
-
 %
-% These macros are for isolines. cLine draws continuous line and is called by isoLines.
-% For now they are only used to draw wood texture. A bunch of wood-related global variables
-% are also here.
+% These macros are for drawing wood texture. A bunch of wood-related global
+% variables are also here.
 %
 
 woodBlockRes := 3minStrokeWidth;
@@ -1526,119 +1654,6 @@ woodBlockYRdensity := 1/24;
 woodKnotAngle := 1/3pi;
 woodKnotRadius := 1/8cm;
 woodKnotDensity := 2cm;
-
-% isoLines goes through i by j matrix of nodes, looking for square, that has some of it's
-% angles below zero and some - above, when found, it calls cLine, that tries to build segment of
-% isoline, that happen to go through abovementioned square. Thickness of line is
-% controlled by values in v array.
-% All squares with lines already drawn through are ignored.
-
-vardef isoLines (suffix xy)(expr cs, l, s) =
-begingroup
-    save xxyy, i, j, c, v, sqB, iL, lvl;
-    numeric xxyy[][], c[], v[], sqB, sqbM;
-    lvl := l;
-    path iL;
-    image(
-        for i := 0 step 1 until xpart(cs) - 1:
-            for j := 0 step 1 until ypart(cs) - 1:
-                if (unknown xxyy[i][j]):
-                    c1 := xy[i][j]+lvl;
-                    c2 := xy[i][j+1]+lvl;
-                    c3 := xy[i+1][j]+lvl;
-                    c4 := xy[i+1][j+1]+lvl;
-                    sqB := 0;
-                    sqBm := 0;
-                    if (abs(sign(c1)+sign(c2)+sign(c3)+sign(c4)) < 4):
-                        iL := cLine (xy)((i, j), (0, 0), 0, cs) scaled s;
-                        brushGenerate (reverse(iL),
-                        offsetPathTemplate(iL, 0)(
-                        1/16minStrokeWidth/((1/64 + 2(if (offsetPathTime < length(iL) - 1): (offsetPathTime - floor(offsetPathTime))[v[floor(sqB + offsetPathTime)], v[ceiling(sqB + offsetPathTime)]] else: 1 fi)))
-                        )
-                        , 0);
-                    fi;
-                fi;
-            endfor;
-        endfor;
-        draw (0,0);
-    )
-endgroup
-enddef;
-
-% used here and there.
-
-vardef sign (expr x)=
-    if x > 0: 1 fi
-    if x < 0: -1 fi
-    if x = 0: 1 fi
-enddef;
-
-% cLine tries to generate continouos segment of an isoline
-
-vardef cLine (suffix xy)(expr ij, dr, st, cs) =
-begingroup
-    save p, d, dd, n, i, j, k, outputPath, sqS, cp, dp, nd;
-    pair p[], d[], dd[], cp[], dp[];
-    path outputPath;
-    i := xpart(ij);
-    j := ypart(ij);
-    sqS := 0;
-    if (i >= 0) and (i <= xpart(cs)-1) and (j >= 0) and (j <= ypart(cs)-1):
-        n := 0;
-        c1 := xy[i][j] + lvl; d1:= (i, j);
-        c2 := xy[i][j+1] + lvl; d2:= (i, j+1);
-        c3 := xy[i+1][j] + lvl; d3:= (i+1, j);
-        c4 := xy[i+1][j+1] + lvl; d4:= (i+1, j+1);
-        cp1 := (1, 2); dp1 := (-1, 0);
-        cp2 := (1, 3); dp2 := (0, -1);
-        cp3 := (2, 4); dp3 := (0, 1);
-        cp4 := (3, 4); dp4 := (1, 0);
-        for k := 1 upto 4:
-            c5 := c[xpart(cp[k])]; d5 := d[xpart(cp[k])];
-            c6 := c[ypart(cp[k])]; d6 := d[ypart(cp[k])];
-            if (sign(c5)) <> (sign(c6)):
-                n := n + 1;
-                p[n] := (abs(-c5/(c6-c5)))[d5, d6];
-                dd[n] := dp[k];
-            fi;
-        endfor;
-        sqS := max(c1, c2, c3, c4) - min(c1, c2, c3, c4);
-        if (unknown xxyy[i][j]):
-            xxyy[i][j] := 1;
-            if (dr = (0, 0)):
-                outputPath := cLine (xy)(ij shifted dd2, dd2, st + 1,cs) -- p1 -- p2 -- cLine (xy)(ij shifted dd1, dd1, st - 1,cs);
-            else:
-                nd := 0;
-                if (unknown(xxyy[i + xpart(dd1)][j + ypart(dd1)])):
-                    nd := 1;
-                elseif (unknown(xxyy[i + xpart(dd2)][j + ypart(dd2)])):
-                    nd := 2;
-                fi;
-                if nd > 0:
-                    outputPath := cLine (xy)(ij shifted dd[nd], dd[nd], st + sign(st),cs);
-                    p3 := p[nd];
-                    if (st > 0):
-                        outputPath := outputPath -- p3;
-                    else:
-                        outputPath := p3 -- outputPath;
-                    fi;
-                else:
-                    outputPath := 1/2[p1, p2];
-                fi;
-            fi;
-        else:
-            outputPath := 1/2[p1, p2];
-        fi;
-    else:
-        outputPath := (i, j);
-        xxyy[i][j] := 1;
-    fi;
-    if (st < sqB): sqB := st; fi;
-    if (st > sqBm): sqBm := st; fi;
-    v[st] := sqS;
-    outputPath
-endgroup
-enddef;
 
 % wField returns a value on a scalar field, that is surface of year ring
 
