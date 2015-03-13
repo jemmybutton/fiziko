@@ -483,7 +483,7 @@ enddef;
 
 %
 % This macro is analogous to tubeGenerate, but draws transverse strokes
-% result is really suboptimal for now, but in simple cases it works
+% result is somewhat suboptimal for now, but in simple cases it works ok
 %
 
 def tubeGenerateAlt (expr p, q, d) =
@@ -562,8 +562,11 @@ endgroup
 enddef;
 
 %
-% frontends to simplify tube drawing
+% frontends to simplify tube drawing. tubeOutline variable changes on every call
+% of any tube frontend function and can be used afterwards.
 %
+
+path tubeOutline;
 
 vardef tube.l (expr p)(text offsetFunction)=
 begingroup
@@ -593,6 +596,7 @@ begingroup
     q1 := offsetPathTemplate(q0, 0)(offsetFunction);
     q2 := offsetPathGenerate (q0, q1, 0);
     q3 := offsetPathGenerate (q0, q1 yscaled -1, 0);
+    tubeOutline := q3--reverse(q2)--cycle;
     image(
         tubeGenerateAlt (q2, q3, q1);
         if (cycle p):
@@ -605,7 +609,7 @@ begingroup
 endgroup
 enddef;
 
-vardef tubeOutline (expr p)(text offsetFunction)=
+vardef tube.e (expr p)(text offsetFunction)=
 begingroup
     save q;
     path q[];
@@ -613,7 +617,7 @@ begingroup
     q1 := offsetPathTemplate(q0, 0)(offsetFunction);
     q2 := offsetPathGenerate (q0, q1, 0);
     q3 := offsetPathGenerate (q0, q1 yscaled -1, 0);
-    q3--reverse(q2)--cycle
+    q2--reverse(q3)--cycle
 endgroup
 enddef;
 
@@ -1436,10 +1440,10 @@ begingroup
         tubeGenerateAlt (q2, q3, q1);
         draw q3 -- reverse(q2) withpen thinpen;
         q5 := offsetPathSubdivide(point 0 of q3 -- point 0 of q2);
-        q6 := tubeOutline((0,0) -- (0, -3/2auricle.t))(1/2auricle.t);
+        q6 := tube.e((0,0) -- (0, -3/2auricle.t))(1/2auricle.t);
         draw image(
             q4 := (((0, -1/2) {dir(90)} .. (1/2, 1/2) .. (0, 1) .. {dir(-90)}(-1/2, 1/4)) shifted (0, -1)) scaled 2/3auricle.d;
-            draw shadedEdge(tubeOutline(q4) (1/4auricle.t)) shifted (0, -1/2auricle.t);
+            draw shadedEdge(tube.e(q4) (1/4auricle.t)) shifted (0, -1/2auricle.t);
         ) maskedWith (q3 -- reverse(q2) -- (q2 yscaled 0 shifted (0, -h)) -- (reverse(q3) yscaled 0 shifted (0, -h)) -- cycle)
           maskedWith q6;
         draw shadedEdge(q6);
@@ -1523,8 +1527,10 @@ enddef;
 
 %
 % This one returns a picture of a pulley with diameter d and it's support rotated
-% at angle a
+% at angle a. pulleyOutline path changes every time
 %
+
+path pulleyOutline;
 
 vardef pulley (expr d, a) =
 begingroup
@@ -1571,25 +1577,17 @@ begingroup
         )
     fi;
     image(
+    p0 := fullcircle scaled d;
     p1 := (subpath (3, 9) of fullcircle) scaled r3;
+    p0 := subpath (xpart(p0 intersectiontimes ((point 0 of p1) -- (point 0 of p1 shifted (0, d)))), 8 + xpart(p0 intersectiontimes ((point 0 of reverse(p1)) -- (point 0 of reverse(p1) shifted (0, d))))) of p0;
+    p0 := ((xpart(point 0 of reverse(p0)), 2/3d) -- (xpart(point 0 of p0), 2/3d) -- p0 -- cycle) rotated a;
+    pulleyOutline := p0;
     p1 := (p1 --  (xpart(point 0 of reverse(p1)), 2/3d) --  (xpart(point 0 of p1), 2/3d) -- cycle) rotated a;
     pc1 := pc1 maskedWith p1;
     draw pc1;
     draw p1 withpen thinpen;
     draw shadedEdge(reverse(fullcircle) scaled r4);
     )
-endgroup
-enddef;
-
-vardef pulleyOutline (expr d, a) =
-begingroup
-    save p;
-    path p[];
-    p0 := fullcircle scaled d;
-    p1 := (subpath (3, 9) of fullcircle) scaled 3/5d;
-    p0 := subpath (xpart(p0 intersectiontimes ((point 0 of p1) -- (point 0 of p1 shifted (0, d)))), 8 + xpart(p0 intersectiontimes ((point 0 of reverse(p1)) -- (point 0 of reverse(p1) shifted (0, d))))) of p0;
-    p0 := ((xpart(point 0 of reverse(p0)), 2/3d) -- (xpart(point 0 of p0), 2/3d) -- p0 -- cycle) rotated a;
-    p0
 endgroup
 enddef;
 

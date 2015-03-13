@@ -190,7 +190,7 @@ endfig;
 \end{emp}
 
 \subsection{tube.l (\emph{path})(\emph{offset function})}
-This macro returns a \texttt{picture} of a shaded ``tube'' of variable width along given path, which is  controlled by some arbitrary function, analogous to \texttt{offsetPath}. ``Tube'' drawn by this macro is shaded be longitudal strokes.
+This macro returns a \texttt{picture} of a shaded ``tube'' of variable width along given path, which is  controlled by some arbitrary function, analogous to \texttt{offsetPath}. ``Tube'' drawn by this macro is shaded be longitudal strokes. Once tube is generated, you can call \texttt{tubeOutline} path global variable, if you need one.
 
 \begin{lstlisting}
 beginfig(5)
@@ -209,7 +209,7 @@ endfig;
 \end{emp}
 
 \subsection{tube.t (\emph{path})(\emph{offset function})}
-This macro returns a \texttt{picture} of a shaded ``tube'' of variable width along given path, which is  controlled by some arbitrary function, analogous to \texttt{offsetPath}. ``Tube'' drawn by this macro is shaded be transverse strokes.
+This macro returns a \texttt{picture} of a shaded ``tube'' of variable width along given path, which is  controlled by some arbitrary function, analogous to \texttt{offsetPath}. ``Tube'' drawn by this macro is shaded be transverse strokes. Once tube is generated, you can call \texttt{tubeOutline} path global variable, if you need one.
 
 \begin{lstlisting}
 beginfig(6)
@@ -227,8 +227,8 @@ beginfig(6)
 endfig;
 \end{emp}
 
-\subsection{tubeOutline (\emph{path})(\emph{offset function})}
-This macro returns outline of a tube that can be used to mask objects behind it.
+\subsection{tube.e (\emph{path})(\emph{offset function})}
+This macro returns outline of a tube as a path without shading.
 
 \section{``Higher level'' macros}
 Using macros described in previous section it is possible to construct more complex images. Macros for drawing some often used images are present in this package.
@@ -257,7 +257,7 @@ endfig;
 \end{emp}
 
 \subsection{pulley (\emph{radius, angle})}
-This macro returns a \texttt{picture} of a pulley with specified \texttt{radius} and its support pointed at the direction \texttt{angle} (in degrees). Note that pulley's support protrudes from its center by \texttt{4/3radius}.
+This macro returns a \texttt{picture} of a pulley with specified \texttt{radius} and its support pointed at the direction \texttt{angle} (in degrees). Note that pulley's support protrudes from its center by \texttt{4/3radius}. Once pulley is generated, you can call \texttt{pulleyOutline} path global variable, if you need one.
 
 \begin{lstlisting}
 beginfig(8)
@@ -286,10 +286,6 @@ beginfig(8)
     endfor;
 endfig;
 \end{emp}
-
-\subsection{pulleyOutline (\emph{radius, angle})}
-This macro returns outline of a pulley that can be used to mask objects behind it.
-
 
 \subsection{wheel (\emph{radius, angle})}
 This macro returns a \texttt{picture} of a wheel with specified \texttt{radius} and its support pointed at the direction \texttt{angle} (in degrees).
@@ -686,12 +682,12 @@ beginfig(20)
     p5 := whatever [p3 shifted o1, p4 shifted o1] 
         = whatever [p3 shifted o2, p2 shifted o2];
     a := angle(p1-p3);
-    draw solidSurface(11/10[p2,p1] -- 11/10[p1, p2]);
+    draw solidSurface(11/10[p1,p2] -- 11/10[p2, p1]);
+    draw pulley (d1, a - 90) shifted p5;
     draw image(
         draw p1 -- p3 -- p2 withpen thickpen; 
         draw p3 -- p4 withpen thickpen;
-    ) maskedWith (pulleyOutline (d1, a - 90) shifted p5);
-    draw pulley (d1, a - 90) shifted p5;
+    ) maskedWith (pulleyOutline shifted p5);
     draw sphere.c(d2) shifted p4 shifted (0, -1/2d2);
     dotlabel.llft(btex $A$ etex, p1);
     dotlabel.lrt(btex $B$ etex, p2);
@@ -720,11 +716,11 @@ beginfig(20)
         = whatever [p3 shifted o2, p2 shifted o2];
     a := angle(p1-p3);
     draw solidSurface(11/10[p1,p2] -- 11/10[p2, p1]);
+    draw pulley (d1, a - 90) shifted p5;
     draw image(
         draw p1 -- p3 -- p2 withpen thickpen; 
         draw p3 -- p4 withpen thickpen;
-    ) maskedWith (pulleyOutline (d1, a - 90) shifted p5);
-    draw pulley (d1, a - 90) shifted p5;
+    ) maskedWith (pulleyOutline shifted p5);
     draw sphere.c(d2) shifted p4 shifted (0, -1/2d2);
     dotlabel.llft(btex $A$ etex, p1);
     dotlabel.lrt(btex $B$ etex, p2);
