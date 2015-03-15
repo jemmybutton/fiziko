@@ -1,3 +1,20 @@
+%    fiziko 0.1
+%    Copyright 2015 Sergey Slyusarev
+%
+%    This program is free software: you can redistribute it and/or modify
+%    it under the terms of the GNU General Public License as published by
+%    the Free Software Foundation, either version 3 of the License, or
+%    (at your option) any later version.
+%
+%    This program is distributed in the hope that it will be useful,
+%    but WITHOUT ANY WARRANTY; without even the implied warranty of
+%    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%    GNU General Public License for more details.
+%
+%    You should have received a copy of the GNU General Public License
+%    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
 %
 % Here we define some things of general interest
 %
@@ -1655,7 +1672,7 @@ woodKnotDensity := 2cm;
 
 % wField returns a value on a scalar field, that is surface of year ring
 
-vardef wField (expr i, j, cs, nbr)=
+vardef wField (suffix wk)(expr i, j, cs, nwk)=
 begingroup
     save x, y, csx, csy, ba, a, r, outputValue, k, bd;
     csx := xpart(cs);
@@ -1664,9 +1681,9 @@ begingroup
     y := j*woodBlockDetail;
     bd := 1/2(woodKnotRadius/woodBlockRes)*woodBlockDetail;
     outputValue := 0;
-    for k := 0 upto nbr:
-        r := (abs(((x, y) shifted -b[k]) yscaled (sin(woodKnotAngle))));
-        a := angleRad((x, y) shifted -b[k]);
+    for k := 0 upto nwk:
+        r := (abs(((x, y) shifted -wk[k]) yscaled (sin(woodKnotAngle))));
+        a := angleRad((x, y) shifted -wk[k]);
         if (r >= 2bd) and (1/2r-bd < 8):
             outputValue := outputValue + ((sqrt(1/2r-bd)/(3**(1/2r-bd)))*(sin(woodKnotAngle)*(1/2sin(-a)) + 1)*(1/3 + 2/3abs(cos(a))))**2;
         elseif (r < 2bd):
@@ -1679,15 +1696,15 @@ begingroup
 endgroup
 enddef;
 
-% woodBlock generates coordinates of knots on wood piece, calls wField to
+% woodBlock generates coordinates of knots, calls wField to
 % generate matrix of heights (one for all years, that's simplification, of course)
 % and then calls isoLines for each year ring (shifting values in matrix by woodBlockYRdensity)
 
 vardef woodBlock (expr w, l) =
 begingroup
-    save wood, b, p, q, i, j, k, cl, tr, y, ll, wS, lS, nBr;
+    save wood, wKnot, nwKnot, p, q, i, j, k, cl, tr, wS, lS;
     numeric wood[][];
-    pair b[];
+    pair wKnot[];
     path q;
     picture p;
     if (l > w):
@@ -1702,11 +1719,11 @@ begingroup
             i := -1;
             j := 0;
             forever:
-                b[-1] := (uniformdeviate(wS*woodBlockDetail + woodKnotRadius*woodBlockDetail/woodBlockRes), uniformdeviate(lS*woodBlockDetail + woodKnotRadius*woodBlockDetail/woodBlockRes)) shifted (-1/2woodKnotRadius*woodBlockDetail/woodBlockRes, -1/2woodKnotRadius*woodBlockDetail/woodBlockRes);
+                wKnot[-1] := (uniformdeviate(wS*woodBlockDetail + woodKnotRadius*woodBlockDetail/woodBlockRes), uniformdeviate(lS*woodBlockDetail + woodKnotRadius*woodBlockDetail/woodBlockRes)) shifted (-1/2woodKnotRadius*woodBlockDetail/woodBlockRes, -1/2woodKnotRadius*woodBlockDetail/woodBlockRes);
                 cl := 0;
                 if (i > -1):
                     for k := 0 step 1 until i:
-                        if (woodBlockRes*abs(b[k]-b[-1])/woodBlockDetail) < woodKnotDensity:
+                        if (woodBlockRes*abs(wKnot[k]-wKnot[-1])/woodBlockDetail) < woodKnotDensity:
                             cl := 1;
                         fi;
                     endfor;
@@ -1715,10 +1732,10 @@ begingroup
                     j := j + 1;
                 else:
                     i := i + 1;
-                    b[i] := b[-1];
+                    wKnot[i] := wKnot[-1];
                     for tr := 2woodKnotRadius step -8minStrokeWidth until 2minStrokeWidth:
                         draw brush(
-                        ((fullcircle scaled tr yscaled (1/sin(woodKnotAngle))) shifted (woodBlockRes*b[i]/woodBlockDetail))
+                        ((fullcircle scaled tr yscaled (1/sin(woodKnotAngle))) shifted (woodBlockRes*wKnot[i]/woodBlockDetail))
                         )(
                         minStrokeWidth*(1/2+abs(sin(woodKnotAngle))*abs(sin(angleRad(point offsetPathTime of fullcircle))))
                         );
@@ -1726,15 +1743,15 @@ begingroup
                 fi;
             exitif (j >= 10) or (i >= 1/2((w/cm)*(l*cm))/(woodKnotDensity/cm));
             endfor;
-            nBr := i;
+            nwKnot := i;
             for i := 0 step 1 until wS:
-                ll := uniformdeviate(1/8woodBlockYRdensity);
+                k := uniformdeviate(1/8woodBlockYRdensity);
                 for j := 0 step 1 until lS:
-                    wood[i][j] := wField(i, j, (wS, lS), nBr) + ll;
+                    wood[i][j] := wField (wKnot)(i, j, (wS, lS), nwKnot) + k;
                 endfor;
             endfor;
-            for y := -wS/(80woodBlockYRdensity) - 2 upto wS/(80woodBlockYRdensity) + 2:
-                draw isoLines(wood)((wS, lS), woodBlockYRdensity*y + uniformdeviate(1/8woodBlockYRdensity), woodBlockRes);
+            for i := -wS/(80woodBlockYRdensity) - 2 upto wS/(80woodBlockYRdensity) + 2:
+                draw isoLines(wood)((wS, lS), woodBlockYRdensity*i + uniformdeviate(1/8woodBlockYRdensity), woodBlockRes);
             endfor;
         );
         q := (0, 0) -- (w, 0) -- (w, l) -- (0, l) -- cycle;
