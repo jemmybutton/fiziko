@@ -1,4 +1,4 @@
-%    fiziko 0.1
+%    fiziko 0.1.1
 %    Copyright 2015 Sergey Slyusarev
 %
 %    This program is free software: you can redistribute it and/or modify
