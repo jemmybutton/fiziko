@@ -593,6 +593,7 @@ begingroup
     q1 := offsetPathTemplate(q0, 0)(offsetFunction);
     q2 := offsetPathGenerate (q0, q1, 0);
     q3 := offsetPathGenerate (q0, q1 yscaled -1, 0);
+    tubeOutline := q3--reverse(q2)--cycle;
     image(
         tubeGenerate (q2, q3, q1, 0);
         if (cycle p):
@@ -634,7 +635,8 @@ begingroup
     q1 := offsetPathTemplate(q0, 0)(offsetFunction);
     q2 := offsetPathGenerate (q0, q1, 0);
     q3 := offsetPathGenerate (q0, q1 yscaled -1, 0);
-    q2--reverse(q3)--cycle
+    tubeOutline := q3--reverse(q2)--cycle;
+    tubeOutline
 endgroup
 enddef;
 
