@@ -1300,12 +1300,14 @@ enddef;
 
 vardef solid (expr p, a, t) =
 begingroup
-    save stripes, stripeskind, d, i, j;
+    save stripes, stripeskind, d, i, j, c;
     picture stripes, stripeskind;
+    pair c;
     stripes := image(
         d1 := abs(ulcorner(p rotated (90 - a)) - urcorner(p rotated (90 - a)));
         d2 := abs(ulcorner(p rotated (90 - a)) - llcorner(p rotated (90 - a)));
         stripeskind := dashpattern (on 1mm);
+        c := 1/2[ulcorner(p rotated (90 - a)), lrcorner(p rotated (90 - a))] rotated (a - 90);
         for i:= 0 step (3/2shadingDensity)/d1 until 1:
             if (t = 1):
                 j := round(i*d1/(3/2shadingDensity));
@@ -1319,7 +1321,7 @@ begingroup
                     stripeskind := dashpattern (on 0 off 12shadingDensity);
                 fi;
             fi;
-            draw ((dir(a) scaled 1/2d2) -- (dir(a + 180) scaled 1/2d2)) shifted 1/2[ulcorner(p), lrcorner(p)] shifted i[dir(a + 90) scaled 1/2d1, dir(a -90) scaled 1/2d1] withpen thinpen
+            draw ((dir(a) scaled 1/2d2) -- (dir(a + 180) scaled 1/2d2)) shifted c shifted i[dir(a + 90) scaled 1/2d1, dir(a -90) scaled 1/2d1] withpen thinpen
             dashed stripeskind;
         endfor;
     );
