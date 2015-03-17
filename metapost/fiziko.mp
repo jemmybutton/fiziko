@@ -244,8 +244,8 @@ begingroup
     fi;
     returnPath := (arclength(subpath (0, i) of p), offsetFunction);
     if (i < length(p)):
-        if (arclength(subpath (0, i) of p) < arclength(subpath (0, i + 1/4) of p)):
-            % this thing is glitchy, but should be more accurate
+        % this thing is glitchy, but should be more accurate
+        %if (arclength(subpath (0, i) of p) < arclength(subpath (0, i + 1/4) of p)):
             % offsetPathTime := i + 1/4;
             % offsetPathLength := arclength(subpath (0, i + 1/4) of p)/arclength(p);
             % instantDirection := unitvector((arclength(subpath (0, i + 1/4) of p), offsetFunction) - point 0 of returnPath);
@@ -256,10 +256,10 @@ begingroup
             % offsetPathLength := arclength(subpath (0, i + 3/4) of p)/arclength(p);
             % nextDirection := unitvector(nextDirection - (arclength(subpath (0, i + 3/4) of p), offsetFunction));
             % returnPath := returnPath{instantDirection} .. {nextDirection}offsetPathTemplate(p, i + 1)(offsetFunction);
+        %    returnPath := returnPath -- offsetPathTemplate(p, i + 1)(offsetFunction);
+        %else:
             returnPath := returnPath -- offsetPathTemplate(p, i + 1)(offsetFunction);
-        else:
-            returnPath := returnPath -- offsetPathTemplate(p, i + 1)(offsetFunction);
-        fi;
+        %fi;
     fi;
     returnPath
 endgroup
@@ -684,12 +684,13 @@ enddef;
 
 vardef sphere.l (expr d, lat) =
 begingroup
-    save p, a, x, y, sphlat, latrad, n, c, currentPath, nline;
+    save p, a, x, y, sphlat, latrad, n, c, currentPath, nline, tlat;
     path p[], currentPath, currentArc;
     sphlat := 0;
     nline := 0;
     latrad := (2pi*lat/360);
     n := ceiling((pi*1/2d)/shadingDensity);
+    if (cosd(lat) <> 0): tlat := (sind(lat)/cosd(lat)); fi;
     image(
         draw fullcircle scaled d withpen thinpen;
         p0 := fullcircle rotated 90;
@@ -698,7 +699,7 @@ begingroup
             if (sphlat + latrad < pi) and (sphlat + latrad > 0):
                 if (cosd(lat) <> 0):
                     if (sin(sphlat) <> 0):
-                        x := (sind(lat)/cosd(lat))*(cos(sphlat)/sin(sphlat));
+                        x := tlat*(cos(sphlat)/sin(sphlat));
                     else:
                         x := 0;
                     fi;
@@ -1598,16 +1599,16 @@ begingroup
         )
     fi;
     image(
-    p0 := fullcircle scaled d;
-    p1 := (subpath (3, 9) of fullcircle) scaled r3;
-    p0 := subpath (xpart(p0 intersectiontimes ((point 0 of p1) -- (point 0 of p1 shifted (0, d)))), 8 + xpart(p0 intersectiontimes ((point 0 of reverse(p1)) -- (point 0 of reverse(p1) shifted (0, d))))) of p0;
-    p0 := ((xpart(point 0 of reverse(p0)), 2/3d) -- (xpart(point 0 of p0), 2/3d) -- p0 -- cycle) rotated a;
-    pulleyOutline := p0;
-    p1 := (p1 --  (xpart(point 0 of reverse(p1)), 2/3d) --  (xpart(point 0 of p1), 2/3d) -- cycle) rotated a;
-    pc1 := pc1 maskedWith p1;
-    draw pc1;
-    draw p1 withpen thinpen;
-    draw shadedEdge(reverse(fullcircle) scaled r4);
+        p0 := fullcircle scaled d;
+        p1 := (subpath (3, 9) of fullcircle) scaled r3;
+        p0 := subpath (xpart(p0 intersectiontimes ((point 0 of p1) -- (point 0 of p1 shifted (0, d)))), 8 + xpart(p0 intersectiontimes ((point 0 of reverse(p1)) -- (point 0 of reverse(p1) shifted (0, d))))) of p0;
+        p0 := ((xpart(point 0 of reverse(p0)), 2/3d) -- (xpart(point 0 of p0), 2/3d) -- p0 -- cycle) rotated a;
+        pulleyOutline := p0;
+        p1 := (p1 --  (xpart(point 0 of reverse(p1)), 2/3d) --  (xpart(point 0 of p1), 2/3d) -- cycle) rotated a;
+        pc1 := pc1 maskedWith p1;
+        draw pc1;
+        draw p1 withpen thinpen;
+        draw shadedEdge(reverse(fullcircle) scaled r4);
     )
 endgroup
 enddef;
