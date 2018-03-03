@@ -1,28 +1,10 @@
 \documentclass{article}
-\usepackage{emp}
+
+\usepackage{luamplib}
+\everymplib{verbatimtex \leavevmode etex; input fiziko.mp; beginfig(1);}
+\everyendmplib{endfig;}
+
 \usepackage{listings}
-\usepackage{cclicenses}
-
-\newdimen\textWidthPt
-\setlength\textWidthPt\textwidth
-\divide \textWidthPt by 65536
-
-\newdimen\textHeightPt
-\setlength\textHeightPt\textheight
-\divide \textHeightPt by 65536
-
-\newdimen\latexSizes
-\openout \latexSizes = latexSizes.mp\relax
-\write \latexSizes{
-textWidth := \number \textWidthPt pt;
-textHeight := \number \textHeightPt pt;
-}
-\closeout \latexSizes
-
-\author{Sergey Slyusarev}
-\title{``fiziko'' v. 0.1.1 package for MetaPost }
-
-\lstloadlanguages{MetaPost,TeX}
 \lstset{
 language=MetaPost,
 numbers=left,
@@ -30,14 +12,12 @@ numberstyle=\tiny,
 basicstyle=\scriptsize
 }
 
+\usepackage{cclicenses}
+
+\author{Sergey Slyusarev}
+\title{``fiziko'' v. 0.1.1 package for MetaPost }
+
 \begin{document}
-\begin{empfile}
-
-\begin{empcmds}
-input fiziko.mp
-input latexSizes.mp
-\end{empcmds}
-
 \maketitle
 
 \begin{abstract}
@@ -52,10 +32,8 @@ This document is distributed under CC-BY-SA 4.0 license
 
 \end{centering}
 
-\tableofcontents
-
 \section{Introduction}
-This MetaPost package, initially developed to facilitate preparing a body of illustrations for a physics textbook, includes a set of ``low level'' macros, required for aesthetically pleasing appearance of black and white illustrations, as well as ``higher level'' ones, that rely on them.
+This MetaPost package, initially developed to facilitate a preparation of a body of illustrations for a physics textbook, includes a set of ``low level'' macros, required for aesthetically pleasing appearance of black and white illustrations, as well as ``higher level'' ones, that rely on them.
 
 The idea behind the package is that resolution of printing is often insufficient to make ugly raster halftone patterns invisible, and even when resolution is sufficient, generic digital gradient shading looks plasticky and boring, so, one possible solution is, instead of relying on ordinary halftones, to mock woodcut or ink drawing shading with reasonably thin strokes that will give some oldschool feel to illustrations. By changing minimal stroke width it is possible to quickly adjust illustrations to be printed with given hardware limitations without or with minimal changes in illustrations themselves. 
 
@@ -70,38 +48,37 @@ Simply include this in the beginning of your MetaPost document:
 input fiziko.mp
 \end{lstlisting}
 
-One obvious use scenario for the package is to include its output in a LaTeX document. In that case you might want to use some metrics from LaTeX in your MetaPost pictures in order to fit them better in your document layout. It can be done by including something like this in your LaTeX document preamble:
+%One obvious use scenario for the package is to include its output in a LaTeX document. In that case you might want to use some metrics from LaTeX in your MetaPost pictures in order to fit them better in your document layout. It can be done by including something like this in your LaTeX document preamble:
 
-\begin{lstlisting}[language=TeX]
-\newdimen\textWidthPt
-\setlength\textWidthPt\textwidth
-\divide \textWidthPt by 65536
+%\begin{lstlisting}[language=TeX]
+%\newdimen\textWidthPt
+%\setlength\textWidthPt\textwidth
+%\divide \textWidthPt by 65536
 
-\newdimen\textHeightPt
-\setlength\textHeightPt\textheight
-\divide \textHeightPt by 65536
+%\newdimen\textHeightPt
+%\setlength\textHeightPt\textheight
+%\divide \textHeightPt by 65536
 
-\newdimen\latexSizes
-\openout \latexSizes = latexSizes.mp\relax
-\write \latexSizes{
-textWidth := \number \textWidthPt pt;
-textHeight := \number \textHeightPt pt;
-}
-\closeout \latexSizes
-\end{lstlisting}
+%\newdimen\latexSizes
+%\openout \latexSizes = latexSizes.mp\relax
+%\write \latexSizes{
+%textWidth := \number \textWidthPt pt;
+%textHeight := \number \textHeightPt pt;
+%}
+%\closeout \latexSizes
+%\end{lstlisting}
 
-Then simply input resulting file in your MetaPost document:
+%Then simply input resulting file in your MetaPost document:
 
-\begin{lstlisting}
-input latexSizes.mp
-\end{lstlisting}
-
+%\begin{lstlisting}
+%input latexSizes.mp
+%\end{lstlisting}
 
 \section{Global variables}
 A few global variables control different aspects of macros behavior. Not all theoretically possible values are meaningful and some will definitely result in ugly pictures or errors.
 
 \subsection{minStrokeWidth}
-This variable controls minimal thickness of lines that are used for shading. Below this value lines are not getting thinner, but become dashed instead, maintaining roughly the same amount of ink per unit length as thinner line would take. Default value is one third of a point:
+This variable controls minimal thickness of lines that are used for shading. Below this value lines are not getting thinner, but become dashed instead, maintaining roughly the same amount of ink per unit length as a thinner line would take. Default value is one third of a point:
 
 \begin{lstlisting}
 minStrokeWidth := 1/3pt;
@@ -115,161 +92,133 @@ lightDirection := (-1/8pi, 1/8pi);
 \end{lstlisting}
 
 \section{``Lower level'' macros}
-Currently, algorithms are quite stupid and will produce decent results only in certain, simple, circumstances.
+Currently, algorithms are quite stupid and will produce decent results only in certain simple circumstances.
 
 \subsection{offsetPath (\emph{path})(\emph{offset function})}
-This macro returns offset path (of type \texttt{path}) to current path with distance from the original path controlled by some arbitrary function; typically, it is a function of path length, set as either \texttt{offsetPathTime} or \texttt{offsetPathLength}. Former is simply \texttt{time} on current path and changes from 0 to \texttt{length(path)}, and latter changes from 0 to 1 over the path \texttt{arctime} (as a function of \texttt{arclength}).
+This macro returns offset path (of type \texttt{path}) to a current path with a distance from the original path controlled by some arbitrary function; typically, it is a function of path length, set as either \texttt{offsetPathTime} or \texttt{offsetPathLength}. Former is simply \texttt{time} on current path and changes from 0 to \texttt{length(path)}, and latter changes from 0 to 1 over the path \texttt{arctime} (as a function of \texttt{arclength}).
 
 \begin{lstlisting}
-beginfig(1)
     path p, q;
     p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
     q := offsetPath(p)(1cm*sin(offsetPathLength*pi));
     draw p;
     draw q dashed evenly;
-endfig;
 \end{lstlisting}
 
-\noindent\begin{emp}(1cm, 1cm)
-beginfig(1)
+\begin{mplibcode}
     path p, q;
     p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
     q := offsetPath(p)(1cm*sin(offsetPathLength*pi));
     draw p;
     draw q dashed evenly;
-endfig;
-\end{emp}
+\end{mplibcode}
 
 \subsection{brush (\emph{path})(\emph{offset function})}
 This macro returns a \texttt{picture} of a line of variable width along given path, which is  controlled by some arbitrary function, analogous to \texttt{offsetPath}. If line is getting thinner than \texttt{minStrokeWith}, it is drawn dashed.
 
 \begin{lstlisting}
-beginfig(2)
     path p;
     p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
     draw brush (p)(2minStrokeWidth*sin(offsetPathLength*pi));
-endfig;
 \end{lstlisting}
 
-\noindent\begin{emp}(1cm, 1cm)
-beginfig(2)
+\begin{mplibcode}
     path p;
     p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
     draw brush (p)(2minStrokeWidth*sin(offsetPathLength*pi));
-endfig;
-\end{emp}
+\end{mplibcode}
 
 \subsection{sphere.c (\emph{diameter})}
-This macro returns a \texttt{picture} of a sphere with specified diameter shaded with concentric strokes. Strokes are arranged to fit \texttt{tube.l}.
+This macro returns a \texttt{picture} of a sphere with specified diameter shaded with concentric strokes. Strokes are arranged to fit those of \texttt{tube.l}.
 
 \begin{lstlisting}
-beginfig(3)
     for i := 1 step 1 until 6:
         draw sphere.c(i*1/4cm) shifted (1/2cm*(i*(i+1))/2, 0);
     endfor;
-endfig;
 \end{lstlisting}
 
-\noindent\begin{emp}(1cm, 1cm)
-beginfig(3)
+\begin{mplibcode}
     for i := 1 step 1 until 6:
         draw sphere.c(i*1/4cm) shifted (1/2cm*(i*(i+1))/2, 0);
     endfor;
-endfig;
-\end{emp}
+\end{mplibcode}
 
 \subsection{sphere.l (\emph{diameter, angle})}
 This macro returns a \texttt{picture} of a shaded sphere with specified diameter. Unlike \texttt{sphere.c} macro, this one draws latitudinal strokes around axis rotated at specified \texttt{angle}.
 
 \begin{lstlisting}
-beginfig(4)
     for i := 1 step 1 until 6:
         draw sphere.l(i*1/4cm, -90 + i*30)
              shifted (1/2cm*(i*(i+1))/2, 0);
     endfor;
-endfig;\end{lstlisting}
-
-\noindent\begin{emp}(1cm, 1cm)
-beginfig(4)
-    for i := 1 step 1 until 6:
-        draw sphere.l(i*1/4cm, -90 + i*30)
-             shifted (1/2cm*(i*(i+1))/2, 0);
-    endfor;
-endfig;
-\end{emp}
-
-\subsection{tube.l (\emph{path})(\emph{offset function})}
-This macro returns a \texttt{picture} of a shaded ``tube'' of variable width along given path, which is  controlled by some arbitrary function, analogous to \texttt{offsetPath}. ``Tube'' drawn by this macro is shaded be longitudal strokes. Once tube is generated, you can call \texttt{tubeOutline} path global variable, if you need one.
-
-\begin{lstlisting}
-beginfig(5)
-    path p;
-    p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
-    draw tube.l (p)(1/2cm*sin(offsetPathLength*pi));
-endfig;
 \end{lstlisting}
 
-\noindent\noindent\begin{emp}(1cm, 1cm)
-beginfig(5)
+\begin{mplibcode}
+    for i := 1 step 1 until 6:
+        draw sphere.l(i*1/4cm, -90 + i*30)
+             shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+\end{mplibcode}
+
+\subsection{tube.l (\emph{path})(\emph{offset function})}
+This macro returns a \texttt{picture} of a shaded ``tube'' of a variable width along a given path, which is  controlled by some arbitrary function, analogous to \texttt{offsetPath}. ``Tube'' drawn by this macro is shaded be longitudal strokes. Once tube is generated, you can call \texttt{tubeOutline} path global variable, if you need one.
+
+\begin{lstlisting}
     path p;
     p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
     draw tube.l (p)(1/2cm*sin(offsetPathLength*pi));
-endfig;
-\end{emp}
+\end{lstlisting}
+
+\begin{mplibcode}
+    path p;
+    p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
+    draw tube.l (p)(1/2cm*sin(offsetPathLength*pi));
+\end{mplibcode}
 
 \subsection{tube.t (\emph{path})(\emph{offset function})}
 This macro returns a \texttt{picture} of a shaded ``tube'' of variable width along given path, which is  controlled by some arbitrary function, analogous to \texttt{offsetPath}. ``Tube'' drawn by this macro is shaded be transverse strokes. Once tube is generated, you can call \texttt{tubeOutline} path global variable, if you need one.
 
 \begin{lstlisting}
-beginfig(6)
     path p;
     p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
     draw tube.t (p)(1/2cm*sin(offsetPathLength*pi));
-endfig;
 \end{lstlisting}
 
-\noindent\begin{emp}(1cm, 1cm)
-beginfig(6)
+\begin{mplibcode}
     path p;
     p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
     draw tube.t (p)(1/2cm*sin(offsetPathLength*pi));
-endfig;
-\end{emp}
+\end{mplibcode}
 
 \subsection{tube.e (\emph{path})(\emph{offset function})}
-This macro returns outline of a tube as a path without shading.
+This macro returns the outline of a tube as a path.
 
 \section{``Higher level'' macros}
-Using macros described in previous section it is possible to construct more complex images. Macros for drawing some often used images are present in this package.
+Using macros described in the previous section it is possible to construct more complex images. Macros for drawing some often used images are present in this package.
 
 \subsection{eye (\emph{angle})}
 This macro returns a \texttt{picture} of an eye pointed at the direction \texttt{angle} (in degrees). Eye size is controlled by a global variable \texttt{eyescale}, which has default value of \texttt{eyescale := 1/2cm;}.
 
 \begin{lstlisting}
-beginfig(7)
     save eyescale;
     for i := 1 step 1 until 6:
         eyescale := 1/6cm*i;
         draw eye(i*60) shifted (1/2cm*(i*(i+1))/2, 0);
     endfor;
-endfig;
 \end{lstlisting}
 
-\noindent\begin{emp}(1cm, 1cm)
-beginfig(7)
+\begin{mplibcode}
     save eyescale;
     for i := 1 step 1 until 6:
         eyescale := 1/6cm*i;
         draw eye(i*60) shifted (1/2cm*(i*(i+1))/2, 0);
     endfor;
-endfig;
-\end{emp}
+\end{mplibcode}
 
 \subsection{pulley (\emph{radius, angle})}
 This macro returns a \texttt{picture} of a pulley with specified \texttt{radius} and its support pointed at the direction \texttt{angle} (in degrees). Note that pulley's support protrudes from its center by \texttt{4/3radius}. Once pulley is generated, you can call \texttt{pulleyOutline} path global variable, if you need one.
 
 \begin{lstlisting}
-beginfig(8)
     draw (-1/8cm, 0)--(12cm, 0);
     for i := 1 step 1 until 6:
         r := 1/7cm*i;
@@ -279,11 +228,9 @@ beginfig(8)
             drawarrow (-r, -4/3r) -- (-r, -2cm);
         ) shifted (1/2cm*(i*(i+1))/2, 0);
     endfor;
-endfig;
 \end{lstlisting}
 
-\noindent\begin{emp}(1cm, 1cm)
-beginfig(8)
+\begin{mplibcode}
     draw (-1/8cm, 0)--(12cm, 0);
     for i := 1 step 1 until 6:
         r := 1/7cm*i;
@@ -293,81 +240,67 @@ beginfig(8)
             drawarrow (-r, -4/3r) -- (-r, -2cm);
         ) shifted (1/2cm*(i*(i+1))/2, 0);
     endfor;
-endfig;
-\end{emp}
+\end{mplibcode}
 
 \subsection{wheel (\emph{radius, angle})}
 This macro returns a \texttt{picture} of a wheel with specified \texttt{radius} and its support pointed at the direction \texttt{angle} (in degrees).
 
 \begin{lstlisting}
-beginfig(9)
     draw (-1/8cm, 0)--(12cm, 0);
     for i := 1 step 1 until 6:
         r := 1/7cm*i;
         draw wheel(2r, 0) shifted (0, -r) shifted (1/2cm*(i*(i+1))/2, 0);
     endfor;
-endfig;
 \end{lstlisting}
 
-\noindent\begin{emp}(1cm, 1cm)
-beginfig(9)
+\begin{mplibcode}
     draw (-1/8cm, 0)--(12cm, 0);
     for i := 1 step 1 until 6:
         r := 1/7cm*i;
         draw wheel(2r, 0) shifted (0, -r) shifted (1/2cm*(i*(i+1))/2, 0);
     endfor;
-endfig;
-\end{emp}
+\end{mplibcode}
 
 
 \subsection{weight.s (\emph{height})}
-This macro draws a kind of weight of a specific \texttt{height} that is standing on the point \texttt{(0, 0)}.
+This macro returns a \texttt{picture} of a weight of a specific \texttt{height} that is standing on the point \texttt{(0, 0)}.
 
 \begin{lstlisting}
-beginfig(10)
     for i := 1 step 1 until 6:
         draw weight.s(1/4cm + i*1/4cm) shifted (1/2cm*(i*(i+1))/2, 0);
     endfor;
     draw (-1/8cm, 0)--(12cm, 0);
-endfig;
 \end{lstlisting}
 
-\noindent\begin{emp}(1cm, 1cm)
-beginfig(10)
+\begin{mplibcode}
     for i := 1 step 1 until 6:
         draw weight.s(1/4cm + i*1/4cm) shifted (1/2cm*(i*(i+1))/2, 0);
     endfor;
     draw (-1/8cm, 0)--(12cm, 0);
-endfig;
-\end{emp}
+\end{mplibcode}
 
 \subsection{weight.h (\emph{height})}
-This macro draws a kind of weight of a specific \texttt{height} that is is hanging from the point \texttt{(0, 0)}.
+This macro returns a \texttt{picture} of a weight of a specific \texttt{height} that is is hanging from the point \texttt{(0, 0)}.
 
 \begin{lstlisting}
-beginfig(11)
     for i := 1 step 1 until 6:
         draw weight.h(1/4cm + i*1/4cm) shifted (1/2cm*(i*(i+1))/2, 0);
     endfor;
     draw (12cm, 0)--(-1/8cm, 0);
-endfig;
 \end{lstlisting}
 
-\noindent\begin{emp}(1cm, 1cm)
-beginfig(11)
+\begin{mplibcode}
     for i := 1 step 1 until 6:
         draw weight.h(1/4cm + i*1/4cm) shifted (1/2cm*(i*(i+1))/2, 0);
     endfor;
     draw (12cm, 0)--(-1/8cm, 0);
-endfig;
-\end{emp}
+\end{mplibcode}
 
 
 \subsection{spring (\emph{point a, point b, number of steps})}
 This macro returns a \texttt{picture} of a spring stretched between points \texttt{a} and \texttt{b} (of type \texttt{pair}), with specified \texttt{number of steps}. Spring width is controlled by global variable \texttt{springwidth} with the default value \texttt{springwidth := 1/8cm;}.
 
 \begin{lstlisting}
-beginfig(12)
     pair a, b;
     a := (0, 0);
     for i := 1 step 1 until 6:
@@ -375,11 +308,9 @@ beginfig(12)
         b := (i*1/3cm, - i*1/5cm);
         draw spring (a, b, 10) shifted (2/5cm*(i*(i+1))/2, 0);
     endfor;
-endfig;
 \end{lstlisting}
 
-\noindent\begin{emp}(1cm, 1cm)
-beginfig(12)
+\begin{mplibcode}
     pair a, b;
     a := (0, 0);
     for i := 1 step 1 until 6:
@@ -387,76 +318,64 @@ beginfig(12)
         b := (i*1/3cm, - i*1/5cm);
         draw spring (a, b, 10) shifted (2/5cm*(i*(i+1))/2, 0);
     endfor;
-endfig;
-\end{emp}
+\end{mplibcode}
 
 \subsection{solidSurface (\emph{path})}
-This macro returns a \texttt{picture} of a solid surface on the right of \texttt{path}.
+This macro returns a \texttt{picture} of a solid surface on the right side of a given \texttt{path}.
 
 \begin{lstlisting}
-beginfig(13)
     path p;
     p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
     draw solidSurface(p);
-endfig;
 \end{lstlisting}
 
-\noindent\begin{emp}(1cm, 1cm)
-beginfig(13)
+\begin{mplibcode}
     path p;
     p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
     draw solidSurface(p);
-endfig;
-\end{emp}
+\end{mplibcode}
 
 \subsection{solid (\emph{path, angle, type})}
 Fills given \texttt{path} with strokes of specific type at a given \texttt{angle}. \texttt{type} can be 0 (``solid'' strokes) and 1 (``glass'' strokes).
 
 \subsection{woodBlock (\emph{width, height})}
-Draws a rectangular block of wood with its bottom-left corner in the origin.
+Returns a \texttt{picture} of a rectangular block of wood with its bottom-left corner in the origin.
 
 \begin{lstlisting}
-beginfig(14)
     draw woodBlock(10cm, 1/2cm);
-endfig;
 \end{lstlisting}
 
-\noindent\begin{emp}(1cm, 1cm)
-beginfig(14)
+\begin{mplibcode}
     draw woodBlock(10cm, 1/2cm);
-endfig;
-\end{emp}
+\end{mplibcode}
+
 \subsection{globe (\emph{radius, longitude, latitude})}
 This macro returns a \texttt{picture} of the globe of specified \texttt{radius} centered at specific \texttt{longitude} and \texttt{latitude};
 
 \begin{lstlisting}
-beginfig(15)
     for i := 1 step 1 until 6:
         draw globe(i*1/4cm, i*60, -90 + i*30)
          shifted (1/2cm*(i*(i+1))/2, 0);
     endfor;
-endfig;
 \end{lstlisting}
 
-\noindent\begin{emp}(1cm, 1cm)
-beginfig(15)
+\begin{mplibcode}
     for i := 1 step 1 until 6:
         draw globe(i*1/4cm, i*60, -90 + i*30)
          shifted (1/2cm*(i*(i+1))/2, 0);
     endfor;
-endfig;
-\end{emp}
+\end{mplibcode}
+
 
 \section{Other macros}
 Some macros that are not directly related to drawing are listed below
 
 \subsection{refractionPath (\emph{initial ray, shape, refraction coefficient})}
-This macro returns a path that represent refraction of some \texttt{ray} (any variable of type  \texttt{path}, point next to last in a given path is considered a source of a ``ray'', and last point determines its direction) through some  \texttt{shape} with given \texttt{refraction coefficient}. In case it happens, ``ray'' is fully internally reflected.
+This macro returns a \texttt{path} that represent refraction of some \texttt{ray} (any variable of type  \texttt{path}, point next to last in a given path is considered a source of a ``ray'', and last point determines its direction) through some  \texttt{shape} with given \texttt{refraction coefficient}. When appropriate, the ``ray'' is fully internally reflected.
 
-Setting \texttt{refraction coefficient} to 0 results in reflection instead of refraction.
+Setting \texttt{refraction coefficient} to 0 results in reflection instead of refraction in all cases.
 
 \begin{lstlisting}
-beginfig(16)
     path r, p;
     p := fullcircle scaled 2.1cm;
     draw p;
@@ -464,11 +383,9 @@ beginfig(16)
         r := (-4cm, i) -- (-1cm, i);
         draw refractionPath(r, p, 1.5);
     endfor;
-endfig;
 \end{lstlisting}
 
-\noindent\begin{emp}(1cm, 1cm)
-beginfig(16)
+\begin{mplibcode}
     path r, p;
     p := fullcircle scaled 2.1cm;
     draw p;
@@ -476,31 +393,26 @@ beginfig(16)
         r := (-4cm, i) -- (-1cm, i);
         draw refractionPath(r, p, 1.5);
     endfor;
-endfig;
-\end{emp}
+\end{mplibcode}
 
 
 \subsection{lens (\emph{(left radius, right radius), thickness, diameter, units})}
-This macro returns a path that represent a section of a lens with given radii of curvature (positive value for convex, negative --- for concave), thickness (i. e. distance benween sides' centers) and diameter (i. e. height) in given arbitrary units.
+This macro returns a \texttt{path} that represent a section of a lens with given radii of curvature (positive value for convex, negative --- for concave), thickness (i. e. distance benween sides' centers) and diameter (i. e. height) in given arbitrary units.
 
 \begin{lstlisting}
-beginfig(17)
     draw lens((5, 10), 1/2, 2, cm);
     draw lens((-10, -5), 1/4, 2, cm) shifted (2cm, 0);
     draw lens((infinity, 7), 1/4, 2, cm) shifted (4cm, 0);
-endfig;
 \end{lstlisting}
 
-\noindent\begin{emp}(1cm, 1cm)
-beginfig(17)
+\begin{mplibcode}
     draw lens((5, 10), 1/2, 2, cm);
     draw lens((-10, -5), 1/4, 2, cm) shifted (2cm, 0);
     draw lens((infinity, 7), 1/4, 2, cm) shifted (4cm, 0);
-endfig;
-\end{emp}
+\end{mplibcode}
 
 \section{Auxilary macros}
-Some macros not related to physical problems at all are listed below.
+Some macros that not related to physical problems at all are listed below.
 
 \subsection{\emph{picture} maskedWith \emph{path}}
 This macro masks a part of a \texttt{picture} with closed \texttt{path}. In fact this is inversion of metapost's built-in \texttt{clip} but, in contrast to the latter, it does not modify original image. Note that it requires that counter-clockwise \texttt{path} to work properly.
@@ -517,9 +429,7 @@ Draws \texttt{path} with arrows in the middles of segments with length no less t
 \subsection{markAngle (\emph{point a, point o, point b})(\emph{text})}
 This macro marks an angle \texttt{aob} (counter-clockwise) with some \texttt{text}
 
-
 \begin{lstlisting}
-beginfig(18)
     pair a, o, b;
     for i:= 30 step 60 until 390:
         o := (10cm*(i/360), 0);
@@ -528,10 +438,9 @@ beginfig(18)
         draw (a--o--b);
         markAngle(a, o, b)(btex $\alpha$ etex);
     endfor;
-endfig;\end{lstlisting}
+\end{lstlisting}
 
-\noindent\begin{emp}(1cm, 1cm)
-beginfig(18)
+\begin{mplibcode}
     pair a, o, b;
     for i:= 30 step 60 until 390:
         o := (10cm*(i/360), 0);
@@ -540,16 +449,14 @@ beginfig(18)
         draw (a--o--b);
         markAngle(a, o, b)(btex $\alpha$ etex);
     endfor;
-endfig;
-\end{emp}
+\end{mplibcode}
 
 
 \section{Some examples}
 
 \subsection{Gregory-Maksutov type telescope}
-Lines 4--11 define parameters of lenses and mirrors\footnote{Taken from here http://www.google.ru/patents/US2701983}. Lines 12--17 generate lenses. On line 21 shape of prism is defined. Line 23 cuts part of the rear mirror. Line 27 describes mirror part of the front lens. On lines 32--34 all the glass parts are drawn. On lines 35--37 all the mirror ones. On lines 40--45 rays are traced through all system in order specified in loop on line 42. Lines 50--57 are about telescope frame.
+Lines 3--11 define parameters of lenses and mirrors\footnote{Taken from here http://www.google.ru/patents/US2701983}. Lines 12--16 generate lenses. On line 20 shape of prism is defined. Line 22 cuts part of the rear mirror. Line 26 describes mirror part of the front lens. On lines 31--33 all the glass parts are drawn. On lines 34--36 all the mirror ones. On lines 39--44 rays are traced through all system in order specified in loop on line 41. Lines 49--56 are about the telescope frame.
 \begin{lstlisting}
-beginfig(19)
     path p[], q[], axis[], f[]; pair o;
     u := 6mm;
     r1 := -36.979; r2 := -r1; t1 := 0.7; n1 := 1.517; d1 := 5;
@@ -606,11 +513,9 @@ beginfig(19)
           -- (ll5*u + 1/2d2*u, ypart(o));
     draw f1 withpen fatpen; draw f1 yscaled -1 withpen fatpen;
     draw f2 withpen fatpen; draw f3 withpen fatpen;
-endfig;
 \end{lstlisting}
 
-\noindent\begin{emp}(1cm, 1cm)
-beginfig(19)
+\begin{mplibcode}
     path p[], q[], axis[], f[]; pair o;
     u := 6mm;
     r1 := -36.979; r2 := -r1; t1 := 0.7; n1 := 1.517; d1 := 5;
@@ -667,14 +572,12 @@ beginfig(19)
           -- (ll5*u + 1/2d2*u, ypart(o));
     draw f1 withpen fatpen; draw f1 yscaled -1 withpen fatpen;
     draw f2 withpen fatpen; draw f3 withpen fatpen;
-endfig;
-\end{emp}
+\end{mplibcode}
 
 \subsection{L'H\^{o}pital's Pulley Problem}
-Line 4 describe initial setup. Line 5 is problem's solution. Lines 9--12 set all the points where they belong. Lines 13--16 are needed to decide where to put the pulley.
+Line 3 describe initial setup. Line 4 is problem's solution. Lines 8--11 set all the points where they belong. Lines 12--16 are needed to decide where to put the pulley.
 
 \begin{lstlisting}
-beginfig(20)
     pair p[], o[];
     numeric a, d[], l[], x[], y[];
     l0 := 6; l1 := 4; l2 := 4;
@@ -703,11 +606,9 @@ beginfig(20)
     dotlabel.ulft(btex $C$ etex, p4);
     label.llft(btex $l$ etex, 1/2[p1, p3]);
     markAngle(p3, p1, p2)(btex $\alpha$ etex);
-endfig;
 \end{lstlisting}
 
-\noindent\begin{emp}(1cm, 1cm)
-beginfig(20)
+\begin{mplibcode}
     pair p[], o[];
     numeric a, d[], l[], x[], y[];
     l0 := 6; l1 := 4; l2 := 4;
@@ -736,13 +637,11 @@ beginfig(20)
     dotlabel.ulft(btex $C$ etex, p4);
     label.llft(btex $l$ etex, 1/2[p1, p3]);
     markAngle(p3, p1, p2)(btex $\alpha$ etex);
-endfig;
-\end{emp}
+\end{mplibcode}
 
 \subsection{Hooke's law}
 
 \begin{lstlisting}
-beginfig(21)
     numeric l[],d, h;
     pair p[], q[];
     l0 := 3/2cm; l1 := 1cm;
@@ -767,11 +666,9 @@ beginfig(21)
     drawdblarrow q2--q3 withpen thinpen;
     label.lft (btex $x$ etex, 1/2[q1, q2]);
     label.lft (btex $x$ etex, 1/2[q2, q3]);
-endfig;
 \end{lstlisting}
 
-\noindent\begin{emp}(1cm, 1cm)
-beginfig(21)
+\begin{mplibcode}
     numeric l[],d, h;
     pair p[], q[];
     l0 := 3/2cm; l1 := 1cm;
@@ -796,13 +693,11 @@ beginfig(21)
     drawdblarrow q2--q3 withpen thinpen;
     label.lft (btex $x$ etex, 1/2[q1, q2]);
     label.lft (btex $x$ etex, 1/2[q2, q3]);
-endfig;
-\end{emp}
+\end{mplibcode}
 
 \subsection{Klein bottle}
 
 \begin{lstlisting}
-beginfig(22)
     path p;
     p := (0, 0){dir(90)} .. (-1/3cm, 3/2cm) 
          .. (0, 7/2cm) .. (3/2cm, 2cm) .. {dir(-90)}(0, 0);
@@ -818,11 +713,9 @@ beginfig(22)
            )/7
        )*6cm
     );
-endfig;
 \end{lstlisting}
 
-\noindent\begin{emp}(1cm, 1cm)
-beginfig(22)
+\begin{mplibcode}
     path p;
     p := (0, 0){dir(90)} .. (-1/3cm, 3/2cm) 
          .. (0, 7/2cm) .. (3/2cm, 2cm) .. {dir(-90)}(0, 0);
@@ -838,13 +731,11 @@ beginfig(22)
            )/7
        )*6cm
     );
-endfig;
-\end{emp}
+\end{mplibcode}
 
 \subsection{Weight on a cart}
 
 \begin{lstlisting}
-beginfig(23)
     numeric l, w, r,  h;
     l := 4cm;
     w := 1/4cm;
@@ -855,11 +746,9 @@ beginfig(23)
     draw wheel (r, 0) shifted (r, 1/2r);
     draw wheel (r, 0) shifted (l-r, 1/2r);
     draw weight.s(h) shifted (1/2l, r + w);
-endfig;
 \end{lstlisting}
 
-\noindent\begin{emp}(1cm, 1cm)
-beginfig(23)
+\begin{mplibcode}
     numeric l, w, r,  h;
     l := 4cm;
     w := 1/4cm;
@@ -870,10 +759,7 @@ beginfig(23)
     draw wheel (r, 0) shifted (r, 1/2r);
     draw wheel (r, 0) shifted (l-r, 1/2r);
     draw weight.s(h) shifted (1/2l, r + w);
-endfig;
-\end{emp}
+\end{mplibcode}
 
 
-
-\end{empfile}
 \end{document}
