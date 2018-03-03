@@ -242,6 +242,31 @@ This macro returns a \texttt{picture} of a pulley with specified \texttt{radius}
     endfor;
 \end{mplibcode}
 
+\subsection{pulleyWheel (\emph{radius})}
+This macro returns a \texttt{picture} of a pulley wheel with specified \texttt{radius}.
+
+\begin{lstlisting}
+    for i := 1 step 1 until 6:
+        r := 1/7cm*i;
+        draw image(
+            draw pulleyWheel(2r);
+            draw (r, 0) -- (r, 2cm);
+            drawarrow (-r, 0) -- (-r, 2cm);
+        ) shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+\end{lstlisting}
+
+\begin{mplibcode}
+    for i := 1 step 1 until 6:
+        r := 1/7cm*i;
+        draw image(
+            draw pulleyWheel(2r);
+            draw (r, 0) -- (r, 2cm);
+            drawarrow (-r, 0) -- (-r, 2cm);
+        ) shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+\end{mplibcode}
+
 \subsection{wheel (\emph{radius, angle})}
 This macro returns a \texttt{picture} of a wheel with specified \texttt{radius} and its support pointed at the direction \texttt{angle} (in degrees).
 

@@ -1,5 +1,6 @@
-%    fiziko 0.1.1
-%    Copyright 2015 Sergey Slyusarev
+%    fiziko 0.1.2
+%    MetaPost library for physics textbook illustrations
+%    Copyright 2018 Sergey Slyusarev
 %
 %    This program is free software: you can redistribute it and/or modify
 %    it under the terms of the GNU General Public License as published by
@@ -27,7 +28,6 @@ vardef sin primary x = (sind(x*radian)) enddef;
 vardef cos primary x = (cosd(x*radian)) enddef;
 
 vardef log (expr n, b) =
-begingroup
     save rv;
     numeric rv;
     if n > 0:
@@ -36,7 +36,6 @@ begingroup
         rv := 0;
     fi;
     rv
-endgroup
 enddef;
 
 vardef arcsind primary x = angle((1+-+x,x)) enddef;
@@ -126,7 +125,7 @@ begingroup
 endgroup
 enddef;
 
-% This macro marks angles, surprisingly
+% This macro marks angles, unsurprisingly
 
 def markAngle (expr a, o, b) (text t) =
 begingroup
@@ -189,32 +188,26 @@ fatpen := pencircle scaled 6minStrokeWidth;
 %
 
 vardef pathSubdivideBase (expr p, subdivideStep, i) =
-begingroup
-      save returnPath, sp;
-      path returnPath, sp;
-      returnPath := point i of p;
-      if i<length(p):
-          sp := subpath(i, i + subdivideStep) of p;
-          returnPath := returnPath .. controls (postcontrol 0 of sp) and (precontrol 1 of sp) .. pathSubdivideBase (p, subdivideStep, i + subdivideStep);
-      fi;
-      if (i = 0) and (cycle p):
-          (subpath(0, length(returnPath)-1) of returnPath)  .. controls (postcontrol length(returnPath)-1 of returnPath) and (precontrol length(returnPath) of returnPath) ..  cycle
-      else:
-          returnPath
-      fi
-endgroup
+    save returnPath, sp;
+    path returnPath, sp;
+    returnPath := point i of p;
+    if i<length(p):
+      sp := subpath(i, i + subdivideStep) of p;
+      returnPath := returnPath .. controls (postcontrol 0 of sp) and (precontrol 1 of sp) .. pathSubdivideBase (p, subdivideStep, i + subdivideStep);
+    fi;
+    if (i = 0) and (cycle p):
+      (subpath(0, length(returnPath)-1) of returnPath)  .. controls (postcontrol length(returnPath)-1 of returnPath) and (precontrol length(returnPath) of returnPath) ..  cycle
+    else:
+      returnPath
+    fi
 enddef;
 
 vardef offsetPathSubdivide (expr p) =
-begingroup
     pathSubdivideBase(p, 1/offsetPathSteps, 0)
-endgroup
 enddef;
 
 vardef pathSubdivide (expr p, n) =
-begingroup
     pathSubdivideBase(p, 1/n, 0)
-endgroup
 enddef;
 
 %
@@ -227,7 +220,6 @@ enddef;
 %
 
 vardef offsetPathTemplate (expr p, i) (text offsetFunction) =
-begingroup
     save returnPath, offsetPathTime, offsetPathLength, instantDirection, nextDirection;
     numeric offsetPathTime, offsetPathLength, currentAngle;
     pair instantDirection, nextDirection;
@@ -262,7 +254,6 @@ begingroup
         %fi;
     fi;
     returnPath
-endgroup
 enddef;
 
 %
@@ -272,7 +263,6 @@ enddef;
 %
 
 vardef offsetPathGenerate (expr p, q, i) =
-begingroup
     save returnPath, c, d, pl, ps;
     path returnPath, pl[];
     pair c[], d[];
@@ -317,7 +307,6 @@ begingroup
         fi;
     fi;
     returnPath
-endgroup
 enddef;
 
 %
@@ -394,7 +383,6 @@ enddef;
 %
 
 vardef shadedEdge (expr p) =
-begingroup
     image(
         brushGenerate (p,
             offsetPathTemplate (p, 0) (
@@ -406,7 +394,6 @@ begingroup
                 )
             ), 0);
     )
-endgroup
 enddef;
 
 %
@@ -414,7 +401,6 @@ enddef;
 %
 
 vardef thinBrushPattern (expr w, l) =
-begingroup
     save d;
     numeric d[];
     d0 := w;
@@ -438,7 +424,6 @@ begingroup
     else:
         dashpattern (off 2d2 on d1)
     fi
-endgroup
 enddef;
 
 %
@@ -446,11 +431,9 @@ enddef;
 %
 
 vardef brush (expr p) (text offsetFunction) =
-begingroup
     image(
         brushGenerate (p, offsetPathTemplate(p, 0)(offsetFunction), 0);
     )
-endgroup
 enddef;
 
 %
@@ -566,7 +549,6 @@ enddef;
 %
 
 vardef tubeAngleToAbsoulteAngle (expr p) =
-begingroup
     save a;
     numeric a[];
     a1 := bluepart(p) + 1/2pi;
@@ -575,7 +557,6 @@ begingroup
     a4 := arccos((cos(a1) * cos(a3) - cos(a2) * sin(a3))*(99/100));
     a5 := arccos((cos(a1) * sin(a3) + cos(a2) * cos(a3))*(99/100));
     (a5, a4)
-endgroup
 enddef;
 
 %
@@ -586,7 +567,6 @@ enddef;
 path tubeOutline;
 
 vardef tube.l (expr p)(text offsetFunction)=
-begingroup
     save q;
     path q[];
     q0 := offsetPathSubdivide(p);
@@ -603,11 +583,9 @@ begingroup
             draw q2--reverse(q3)--cycle withpen thinpen;
         fi;
     )
-endgroup
 enddef;
 
 vardef tube.t (expr p)(text offsetFunction)=
-begingroup
     save q;
     path q[];
     q0 := offsetPathSubdivide(p);
@@ -624,11 +602,9 @@ begingroup
             draw q2--reverse(q3)--cycle withpen thinpen;
         fi;
     )
-endgroup
 enddef;
 
 vardef tube.e (expr p)(text offsetFunction)=
-begingroup
     save q;
     path q[];
     q0 := offsetPathSubdivide(p);
@@ -637,7 +613,6 @@ begingroup
     q3 := offsetPathGenerate (q0, q1 yscaled -1, 0);
     tubeOutline := q3--reverse(q2)--cycle;
     tubeOutline
-endgroup
 enddef;
 
 %
@@ -645,7 +620,6 @@ enddef;
 %
 
 vardef sphere.c (expr d) =
-begingroup
     save currentCircle, origCircle, currentRadius, order, circleThickness;
     path currentCircle, origCircle;
     numeric currentRadius, order;
@@ -672,7 +646,6 @@ begingroup
             ), 0);
         endfor;
     )
-endgroup
 enddef;
 
 %
@@ -683,7 +656,6 @@ enddef;
 %
 
 vardef sphere.l (expr d, lat) =
-begingroup
     save p, a, x, y, sphlat, latrad, n, c, currentPath, nline, tlat;
     path p[], currentPath, currentArc;
     sphlat := 0;
@@ -742,11 +714,9 @@ begingroup
             fi;
        endfor;
     )
-endgroup
 enddef;
 
 vardef orderFade (expr v, n)=
-begingroup
     save o;
     if (v > 1/256):
         o := 2**ceiling(log(1/v, 2));
@@ -762,7 +732,6 @@ begingroup
     else:
         0
     fi
-endgroup
 enddef;
 
 %
@@ -770,7 +739,6 @@ enddef;
 %
 
 vardef sphereAngleToAbsoulteAngle (expr p) =
-begingroup
     save a;
     numeric a[];
     a1 := xpart(p) - 1/2pi;
@@ -778,7 +746,6 @@ begingroup
     a3 := arccos(sin(a2)*cos(a1));
     a4 := pi - arccos(sin(a2)*sin(a1));
     (a3, a4)
-endgroup
 enddef;
 
 %
@@ -786,7 +753,6 @@ enddef;
 %
 
 vardef angleToLightness (expr p) =
-begingroup
     save returnValue;
     returnValue := (cos(xpart(p) + xpart(lightDirection))++cos(ypart(p) - ypart(lightDirection)));
     returnValue := angleToLightnessPP(returnValue);
@@ -795,7 +761,6 @@ begingroup
     else:
         returnValue
     fi
-endgroup
 enddef;
 
 vardef angleToLightnessPP (expr v) =
@@ -809,7 +774,6 @@ enddef;
 %
 
 vardef cutPathTime (expr p, h) =
-begingroup
     save cutTime, d;
     numeric cutTime[], d[];
     d1 := xpart(urcorner(p));
@@ -829,7 +793,6 @@ begingroup
         cutTime3 := -1;
     fi;
     cutTime3
-endgroup
 enddef;
 
 %
@@ -839,7 +802,6 @@ enddef;
 %
 
 vardef refractionAngle (expr p, q, n) =
-begingroup
     save a;
     numeric a[];
     a0 := p - q;
@@ -856,7 +818,6 @@ begingroup
         a3 := -1000;
     fi;
     a3
-endgroup
 enddef;
 
 %
@@ -864,9 +825,7 @@ enddef;
 %
 
 vardef reflectionAngle (expr p, q) =
-begingroup
     (2pi - p + 2q)
-endgroup
 enddef;
 
 %
@@ -876,7 +835,6 @@ enddef;
 %
 
 vardef refractionPathR (expr sa, p, n, i, mn) =
-begingroup
     save ray, resultRay, d, s, a, iT;
     path ray, resultRay;
     pair s, iT;
@@ -908,7 +866,6 @@ begingroup
         fi;
     fi;
     resultRay
-endgroup
 enddef;
 
 vardef refractionPath (expr sa, p, n) =
@@ -929,7 +886,6 @@ enddef;
 %
 
 vardef isoLines (suffix xy)(expr cs, l, s) =
-begingroup
     save xxyy, i, j, c, v, sqB, iL, lvl;
     numeric xxyy[][], c[], v[], sqB, sqbM;
     lvl := l;
@@ -957,13 +913,11 @@ begingroup
         endfor;
         draw (0,0);
     )
-endgroup
 enddef;
 
 % cLine tries to generate continouos segment of an isoline
 
 vardef cLine (suffix xy)(expr ij, dr, st, cs) =
-begingroup
     save p, d, dd, n, i, j, k, outputPath, sqS, cp, dp, nd;
     pair p[], d[], dd[], cp[], dp[];
     path outputPath;
@@ -1024,7 +978,6 @@ begingroup
     if (st > sqBm): sqBm := st; fi;
     v[st] := sqS;
     outputPath
-endgroup
 enddef;
 
 %
@@ -1039,7 +992,7 @@ enddef;
 %
 % Though there's a decent library to deal with geography for mp already
 % (http://melusine.eu.org/lab/bmp/a_mp-geo), here's some basic globe-drawing
-% routine for simple cases, note that latitude starts from pole,
+% routine for simple cases, note that latitude starts from the pole,
 % not from the equator (for convenience sake)
 % Below some landmasses are defined
 %
@@ -1059,7 +1012,6 @@ landmass8 := (222.04, 111.1)--(224.53, 115.35)--(228.6, 106.45)--(226.81, 103.35
 %
 
 vardef drawLandMass (expr p, lon, lat) =
-begingroup
     save i, j, k, l, horizon, currentPoint, horizonTimes, outHorizon, inHorizon, visibleContours, pathNumber, horizonArc, arcTimes, resultPath;
     path resultPath, visibleContours[], horizon, horizonArc;
     pair currentPoint, horizonTimes[];
@@ -1134,13 +1086,14 @@ begingroup
         endfor
     fi;
     resultPath -- cycle
-endgroup
 enddef;
 
 % This thing just converts coordinates on globe rotated by lon, lat to screen coordinates
 
 vardef pointOnGlobe (expr p, lon, lat) =
-    (cosd(lon + xpart(p)) * sind(ypart(p)), cosd(ypart(p)) * cosd(lat) + sind(lon + xpart(p)) * sind(ypart(p)) * sind(lat))
+    (cosd(lon + xpart(p)) * sind(ypart(p)),
+        cosd(ypart(p)) * cosd(lat)
+        + sind(lon + xpart(p)) * sind(ypart(p)) * sind(lat))
 enddef;
 
 % This one is needed to check if point on globe is in view
@@ -1153,7 +1106,6 @@ enddef;
 % Likely, this could be done analytically, though.
 
 vardef findHorizonPoint (expr p, lon, lat, i) =
-begingroup
     save selecthalf, returnpoint;
     pair selecthalf, returnpoint;
     if (horizonOnGlobe (point 1/2 of p, lon, lat) < 0):
@@ -1167,11 +1119,9 @@ begingroup
         returnpoint := pointOnGlobe (point 1/2 of p, lon, lat);
     fi;
     returnpoint
-endgroup
 enddef;
 
 vardef globe (expr s, lon, lat) =
-begingroup
     save i, p, lm;
     picture p[];
     path lm;
@@ -1210,7 +1160,6 @@ begingroup
         endfor;
         draw p1;
     )
-endgroup
 enddef;
 
 %
@@ -1222,7 +1171,6 @@ enddef;
 eyescale = 1/2cm;
 
 vardef eye (expr a) =
-begingroup
     save s, eyelids, pupil, eyeball, eyelash, loopstep, p, o;
     path eyelids[], pupil[], eyelash;
     pair p[];
@@ -1278,7 +1226,6 @@ begingroup
             fi;
         endfor;
     ) if cosd(a) < 0: yscaled -1 rotated (a) else: rotated a fi
-endgroup
 enddef;
 
 %
@@ -1286,7 +1233,6 @@ enddef;
 %
 
 vardef solidSurface (expr p) =
-begingroup
     save q, s, d, stripes;
     path q, s;
     picture stripes;
@@ -1296,11 +1242,9 @@ begingroup
         draw solid (s, 45, 0);
         draw p withpen thinpen;
     )
-endgroup
 enddef;
 
 vardef solid (expr p, a, t) =
-begingroup
     save stripes, stripeskind, d, i, j, c;
     picture stripes, stripeskind;
     pair c;
@@ -1328,7 +1272,6 @@ begingroup
     );
     clip stripes to p;
     stripes
-endgroup
 enddef;
 
 %
@@ -1336,7 +1279,6 @@ enddef;
 %
 
 vardef gradientShade (expr p, a) =
-begingroup
     save stripes, stripeshd, d, i, j, s;
     picture stripes;
     path s;
@@ -1351,11 +1293,10 @@ begingroup
     );
     clip stripes to p;
     stripes
-endgroup
 enddef;
 
 %
-% This one draws spring between points p and q with n steps
+% This one draws a spring between points p and q with n steps
 % if stretched more than possible, displayed as a straight line
 % if compressed too much, displayed as having less steps
 %
@@ -1363,7 +1304,6 @@ enddef;
 springwidth := 1/8cm;
 
 vardef spring (expr p, q, n) =
-begingroup
     save sp, ss, t, x, springstep, springcoef, springsegment;
     transform t;
     path ss[];
@@ -1434,7 +1374,6 @@ begingroup
         draw brush (((springwidth)/arclength(p--q))[p, q] shifted (dir(angle(p-q) + 90)*springwidth * springcoef){(p-q)} .. {(p-q)}p)(minStrokeWidth);
         draw brush (((springwidth)/arclength(p--q))[q, p] shifted (dir(angle(p-q) + 90)*springwidth * springcoef){(q-p)} .. {(q-p)}q)(minStrokeWidth);
     )
-endgroup
 enddef;
 
 %
@@ -1442,20 +1381,19 @@ enddef;
 %
 
 vardef weight.h (expr h) =
-begingroup
     save auricle, q, r;
     path q[];
     auricle.d := 2mm;
     auricle.t := 2shadingDensity;
-    r := 1/2(h-auricle.d);
+    r := 2/5(h-auricle.d);
     image(
-        q0 := offsetPathSubdivide((0, -h) -- (0, -auricle.d - 1/7h));
+        q0 := offsetPathSubdivide((0, -h) -- (0, -auricle.d - 1/6h));
         q1 := offsetPathTemplate(q0, 0)(r-(offsetPathLength*(1/8r)));
         q2 := offsetPathGenerate (q0, q1, 0);
         q3 := offsetPathGenerate (q0, q1 yscaled -1, 0);
         tubeGenerate (q2, q3, q1, 0);
         draw reverse(q2) -- q3 withpen thinpen;
-        q0 := offsetPathSubdivide((0, -auricle.d - 1/7h) -- (0, -auricle.d));
+        q0 := offsetPathSubdivide((0, -auricle.d - 1/6h) -- (0, -auricle.d));
         q1 := offsetPathTemplate(q0, 0)(2/8r + 5/8r*(sqrt(1-offsetPathLength**2)));
         q2 := offsetPathGenerate (q0, q1, 0);
         q3 := offsetPathGenerate (q0, q1 yscaled -1, 0);
@@ -1477,11 +1415,9 @@ begingroup
                 )
             ), 0);
     )
-endgroup
 enddef;
 
 vardef weight.s (expr h) =
-begingroup
     save q,r;
     path q[];
     r := 2/5h;
@@ -1506,15 +1442,14 @@ begingroup
         tubeGenerateAlt (q2, q3, q1);
         draw q2 --reverse(q3) withpen thinpen;
     )
-endgroup
 enddef;
 
 %
-% This macro makes a lens-shaped clockwise path with radii r = (left radius, right radius), thickness t and diameter d
+% This macro makes a lens-shaped clockwise path with radii
+% r = (left radius, right radius), thickness t and diameter d
 %
 
 vardef lens (expr r, t, d, s) =
-begingroup
     save p, q, m, c;
     pair c[];
     path p[], q[];
@@ -1544,7 +1479,6 @@ begingroup
     p1 := p1 shifted (-xpart(point xpart(p1 intersectiontimes q3) of p1), 0);
     p2 := p2 shifted (-xpart(point xpart(p2 intersectiontimes q3) of p2) + t, 0);
     reverse(p1--p2--cycle) scaled s
-endgroup
 enddef;
 
 %
@@ -1555,16 +1489,34 @@ enddef;
 path pulleyOutline;
 
 vardef pulley (expr d, a) =
-begingroup
-    save pc, p, r, i;
-    picture pc[];
+    save pw, p, r;
+    picture pw;
     path p[];
+    r1 := 3/5d;
+    r2 := 1/6d;
+    image(
+        p0 := fullcircle scaled d;
+        p1 := (subpath (3, 9) of fullcircle) scaled r1;
+        p0 := subpath (xpart(p0 intersectiontimes ((point 0 of p1) -- (point 0 of p1 shifted (0, d)))), 8 + xpart(p0 intersectiontimes ((point 0 of reverse(p1)) -- (point 0 of reverse(p1) shifted (0, d))))) of p0;
+        p0 := ((xpart(point 0 of reverse(p0)), 2/3d) -- (xpart(point 0 of p0), 2/3d) -- p0 -- cycle) rotated a;
+        pulleyOutline := p0;
+        p1 := (p1 --  (xpart(point 0 of reverse(p1)), 2/3d) --  (xpart(point 0 of p1), 2/3d) -- cycle) rotated a;
+        pw := pulleyWheel(d) maskedWith p1;
+        draw pw;
+        draw p1 withpen thinpen;
+        draw shadedEdge(reverse(fullcircle) scaled r2);
+    )
+enddef;
+
+vardef pulleyWheel (expr d) =
+    save pw, r, i;
+    picture pw;
     r1 := 7/9d;
     r2 := 8/9d;
     r3 := 3/5d;
-    r4 := 1/6d;
+    r4 := 1/8d;
     if (r2-r1) > shadingDensity:
-        pc1 := image(
+        pw := image(
             for i := r3 step 2shadingDensity until r2:
             if (i <= r1) or (i >= r2):
                 thinBrushGenerate (fullcircle scaled i,
@@ -1591,26 +1543,17 @@ begingroup
             draw brush (fullcircle scaled r1)(minStrokeWidth);
             draw brush (fullcircle scaled r2)(minStrokeWidth);
             draw fullcircle scaled d withpen thinpen;
+            draw fullcircle scaled r3 withpen thinpen;
+            draw shadedEdge(reverse(fullcircle) scaled r4);
         );
     else:
-        pc1 := image(
+        pw := image(
             draw shadedEdge (reverse(fullcircle) scaled r1);
             draw fullcircle scaled d withpen thinpen;
+            draw fullcircle scaled r4 withpen thickpen;
         )
     fi;
-    image(
-        p0 := fullcircle scaled d;
-        p1 := (subpath (3, 9) of fullcircle) scaled r3;
-        p0 := subpath (xpart(p0 intersectiontimes ((point 0 of p1) -- (point 0 of p1 shifted (0, d)))), 8 + xpart(p0 intersectiontimes ((point 0 of reverse(p1)) -- (point 0 of reverse(p1) shifted (0, d))))) of p0;
-        p0 := ((xpart(point 0 of reverse(p0)), 2/3d) -- (xpart(point 0 of p0), 2/3d) -- p0 -- cycle) rotated a;
-        pulleyOutline := p0;
-        p1 := (p1 --  (xpart(point 0 of reverse(p1)), 2/3d) --  (xpart(point 0 of p1), 2/3d) -- cycle) rotated a;
-        pc1 := pc1 maskedWith p1;
-        draw pc1;
-        draw p1 withpen thinpen;
-        draw shadedEdge(reverse(fullcircle) scaled r4);
-    )
-endgroup
+    pw
 enddef;
 
 %
@@ -1618,7 +1561,6 @@ enddef;
 %
 
 vardef wheel (expr d, a) =
-begingroup
     save pc, p, r, i;
     picture pc[];
     path p[];
@@ -1660,7 +1602,6 @@ begingroup
         draw pc2;
         draw pc3;
     )
-endgroup
 enddef;
 
 %
@@ -1678,7 +1619,6 @@ woodKnotDensity := 2cm;
 % wField returns a value on a scalar field, that is surface of year ring
 
 vardef wField (suffix wk)(expr i, j, cs, nwk)=
-begingroup
     save x, y, csx, csy, ba, a, r, outputValue, k, bd;
     csx := xpart(cs);
     csy := ypart(cs);
@@ -1698,7 +1638,6 @@ begingroup
     endfor;
     outputValue := outputValue - (i*woodBlockYRdensity)/5 + 1/32sin(pi*i/xpart(cs) + 4pi*j/ypart(cs));
     outputValue
-endgroup
 enddef;
 
 % woodBlock generates coordinates of knots, calls wField to
@@ -1706,7 +1645,6 @@ enddef;
 % and then calls isoLines for each year ring (shifting values in matrix by woodBlockYRdensity)
 
 vardef woodBlock (expr w, l) =
-begingroup
     save wood, wKnot, nwKnot, p, q, i, j, k, cl, tr, wS, lS;
     numeric wood[][];
     pair wKnot[];
@@ -1765,5 +1703,4 @@ begingroup
         draw p;
         draw q withpen thinpen;
     ) if (l < w): xscaled -1 rotated -90 fi
-endgroup
 enddef;
