@@ -215,8 +215,8 @@ This macro returns a \texttt{picture} of an eye pointed at the direction \texttt
     endfor;
 \end{mplibcode}
 
-\subsection{pulley (\emph{radius, angle})}
-This macro returns a \texttt{picture} of a pulley with specified \texttt{radius} and its support pointed at the direction \texttt{angle} (in degrees). Note that pulley's support protrudes from its center by \texttt{4/3radius}. Once pulley is generated, you can call \texttt{pulleyOutline} path global variable, if you need one.
+\subsection{pulley (\emph{diameter, angle})}
+This macro returns a \texttt{picture} of a pulley with specified \texttt{diameter} and its support pointed at the direction \texttt{angle} (in degrees). Note that pulley's support protrudes from its center by \texttt{pulleySupportSize*diameter} and by default \texttt{pulleySupportSize} = 3/2. Once pulley is generated, you can call \texttt{pulleyOutline} path global variable, if you need one.
 
 \begin{lstlisting}
     draw (-1/8cm, 0)--(12cm, 0);
@@ -242,16 +242,16 @@ This macro returns a \texttt{picture} of a pulley with specified \texttt{radius}
     endfor;
 \end{mplibcode}
 
-\subsection{pulleyWheel (\emph{radius})}
-This macro returns a \texttt{picture} of a pulley wheel with specified \texttt{radius}.
+\subsection{pulleyWheel (\emph{diameter})}
+This macro returns a \texttt{picture} of a pulley wheel with specified \texttt{diameter}.
 
 \begin{lstlisting}
     for i := 1 step 1 until 6:
         r := 1/7cm*i;
         draw image(
             draw pulleyWheel(2r);
-            draw (r, 0) -- (r, 2cm);
-            drawarrow (-r, 0) -- (-r, 2cm);
+            draw (r, 0) -- (r, 1cm);
+            drawarrow (-r, 0) -- (-r, 1cm);
         ) shifted (1/2cm*(i*(i+1))/2, 0);
     endfor;
 \end{lstlisting}
@@ -261,14 +261,14 @@ This macro returns a \texttt{picture} of a pulley wheel with specified \texttt{r
         r := 1/7cm*i;
         draw image(
             draw pulleyWheel(2r);
-            draw (r, 0) -- (r, 2cm);
-            drawarrow (-r, 0) -- (-r, 2cm);
+            draw (r, 0) -- (r, 1cm);
+            drawarrow (-r, 0) -- (-r, 1cm);
         ) shifted (1/2cm*(i*(i+1))/2, 0);
     endfor;
 \end{mplibcode}
 
-\subsection{wheel (\emph{radius, angle})}
-This macro returns a \texttt{picture} of a wheel with specified \texttt{radius} and its support pointed at the direction \texttt{angle} (in degrees).
+\subsection{wheel (\emph{diameter, angle})}
+This macro returns a \texttt{picture} of a wheel with specified \texttt{diameter} and its support pointed at the direction \texttt{angle} (in degrees).
 
 \begin{lstlisting}
     draw (-1/8cm, 0)--(12cm, 0);

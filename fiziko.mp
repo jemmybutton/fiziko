@@ -1487,6 +1487,8 @@ enddef;
 %
 
 path pulleyOutline;
+numeric pulleySupportSize;
+pulleySupportSize := 2/3;
 
 vardef pulley (expr d, a) =
     save pw, p, r;
@@ -1497,10 +1499,13 @@ vardef pulley (expr d, a) =
     image(
         p0 := fullcircle scaled d;
         p1 := (subpath (3, 9) of fullcircle) scaled r1;
-        p0 := subpath (xpart(p0 intersectiontimes ((point 0 of p1) -- (point 0 of p1 shifted (0, d)))), 8 + xpart(p0 intersectiontimes ((point 0 of reverse(p1)) -- (point 0 of reverse(p1) shifted (0, d))))) of p0;
-        p0 := ((xpart(point 0 of reverse(p0)), 2/3d) -- (xpart(point 0 of p0), 2/3d) -- p0 -- cycle) rotated a;
+        p0 := subpath (
+            xpart(p0 intersectiontimes ((point 0 of p1) -- (point 0 of p1 shifted (0, d)))),
+            8 + xpart(p0 intersectiontimes ((point 0 of reverse(p1)) -- (point 0 of reverse(p1) shifted (0, d)))))
+            of p0;
+        p0 := ((xpart(point 0 of reverse(p0)), pulleySupportSize*d) -- (xpart(point 0 of p0), pulleySupportSize*d) -- p0 -- cycle) rotated a;
         pulleyOutline := p0;
-        p1 := (p1 --  (xpart(point 0 of reverse(p1)), 2/3d) --  (xpart(point 0 of p1), 2/3d) -- cycle) rotated a;
+        p1 := (p1 --  (xpart(point 0 of reverse(p1)), pulleySupportSize*d) --  (xpart(point 0 of p1), pulleySupportSize*d) -- cycle) rotated a;
         pw := pulleyWheel(d) maskedWith p1;
         draw pw;
         draw p1 withpen thinpen;
