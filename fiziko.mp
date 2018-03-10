@@ -565,6 +565,8 @@ enddef;
 %
 
 path tubeOutline;
+boolean drawTubeEnds;
+drawTubeEnds := true;
 
 vardef tube.l (expr p)(text offsetFunction)=
     save q;
@@ -576,7 +578,7 @@ vardef tube.l (expr p)(text offsetFunction)=
     tubeOutline := q3--reverse(q2)--cycle;
     image(
         tubeGenerate (q2, q3, q1, 0);
-        if (cycle p):
+        if (cycle p) or (not drawTubeEnds):
             draw q2 withpen thinpen;
             draw q3 withpen thinpen;
         else:
@@ -595,7 +597,7 @@ vardef tube.t (expr p)(text offsetFunction)=
     tubeOutline := q3--reverse(q2)--cycle;
     image(
         tubeGenerateAlt (q2, q3, q1);
-        if (cycle p):
+        if (cycle p) or (not drawTubeEnds):
             draw q2 withpen thinpen;
             draw q3 withpen thinpen;
         else:
@@ -1708,4 +1710,159 @@ vardef woodBlock (expr w, l) =
         draw p;
         draw q withpen thinpen;
     ) if (l < w): xscaled -1 rotated -90 fi
+enddef;
+
+%
+% This part is related to knots
+%
+
+vardef appendList@#(suffix listName)(expr valueToAdd, whereToAdd) =
+    save v;
+    string v;
+    if not string listName:
+        string listName;
+    fi;
+    if unknown listName@#:
+        listName@# := "";
+    fi;
+    if string valueToAdd:
+        v := valueToAdd;
+    else:
+        v := decimal(valueToAdd);
+    fi;
+    if length(listName@#) = 0:
+        listName@# := v;
+    else:
+        if (whereToAdd = 1):
+            listName@# := listName@# & ", " & v;
+        else:
+            listName@# := v & ", " & listName@#;
+        fi;
+    fi;
+enddef;
+
+vardef sortList (expr listToSort) =
+    save nPre, nPost, pivot, isSorted, lastValue, preList, postList, rv;
+    numeric nPre, nPost, pivot;
+    boolean isSorted;
+    string preList, postList, rv;
+    nPre := 0;
+    nPost := 0;
+    isSorted := true;
+    lastValue := -infinity;
+    for i=scantokens(listToSort):
+        if (unknown pivot):
+            pivot := i;
+        fi;
+        if (i < pivot):
+            appendList (preList, i, -1);
+            nPre := nPre + 1;
+        else:
+            appendList (postList, i, -1);
+            nPost := nPost + 1;
+        fi;
+        if lastValue > i:
+            isSorted := false;
+        fi;
+        lastValue := i;
+    endfor;
+    if isSorted:
+        rv := listToSort;
+    else:
+        if nPre > 1:
+            preList := sortList(preList);
+        fi;
+        if nPre > 0:
+            preList := preList & ", ";
+        fi;
+        if nPost > 1:
+            postList := sortList(postList);
+        fi;
+        rv := preList & postList;
+    fi;
+    rv
+enddef;
+
+vardef knot (expr p, w) (text orderList) =
+    save slidingSegment, pathSegments, intTimes, timeToSave, numberOfSegments, intersections, intersectionsList, layerContents, layersList, b, e, n, layerContents, segmentPicture;
+    path slidingSegment, pathSegments[];
+    pair intTimes[];
+    numeric timeToSave, intersections[], b, e, n;
+    picture segmentPicture;
+    string layerContents[];
+    for i := 0 step 1 until length(p):
+        slidingSegment := subpath (i, i + 1) of p;
+        intTimes0 := (p firstIntersectionTimes slidingSegment);
+        intTimes1 := (reverse(p) firstIntersectionTimes slidingSegment);
+        if (ypart(intTimes0) > 1/1000)
+            and (xpart(intTimes0) > 1/1000)
+            and (ypart(intTimes0) < length(slidingSegment) - 1/1000)
+            and (xpart(intTimes0) < length(p) - 1/1000):
+            timeToSave := xpart(intTimes0);
+            appendList(intersectionsList, timeToSave, 1);
+        elseif (ypart(intTimes1) > 1/1000)
+            and (xpart(intTimes1) > 1/1000)
+            and (ypart(intTimes1) < length(slidingSegment) - 1/1000)
+            and (xpart(intTimes1) < length(p) - 1/1000):
+            timeToSave := length(p) - xpart(intTimes1);
+            appendList(intersectionsList, timeToSave, 1);
+        fi;
+    endfor;
+    if known intersectionsList:
+        numberOfSegments := 0;
+        for i := scantokens(sortList(intersectionsList)):
+            numberOfSegments := numberOfSegments + 1;
+            intersections[numberOfSegments] := i;
+        endfor;
+        intersections[0] := 0;
+        intersections[numberOfSegments + 1] := length(p);
+        for i := 1 step 1 until numberOfSegments:
+            if (i > 1):
+                b := 1/2[intersections[i-1], intersections[i]];
+            else:
+                b := 0;
+            fi;
+            if (i < numberOfSegments):
+                e := 1/2[intersections[i], intersections[i+1]];
+            else:
+                e := length(p);
+            fi;
+            pathSegments[i] := subpath (b, e) of p;
+        endfor;
+    else:
+        numberOfSegments := 1;
+        pathSegments1 := p;
+    fi;
+    n := 0;
+    for i := orderList:
+        n := n + 1;
+        if (n <= numberOfSegments):
+            appendList[i](layerContents, n, 1);
+            appendList(layersList, i, 1);
+        fi;
+    endfor;
+    if n > 0:
+        if n < numberOfSegments:
+            for i := n + 1 step 1 until numberOfSegments:
+                appendList0(layerContents, i, 1);
+            endfor;
+            appendList(layersList, 0, 1);
+        fi;
+    else:
+        n := n + 1;
+        appendList0(layerContents, n, 1);
+        appendList(layersList, 0, 1);
+    fi;
+    for i := scantokens(sortList(layersList)):
+        for j := scantokens(layerContents[i]):
+            segmentPicture := image(
+                save drawTubeEnds;
+                boolean drawTubeEnds;
+                drawTubeEnds := false;
+                draw tube.l(pathSegments[j])(w);
+                );
+            fill tubeOutline withcolor white;
+            draw segmentPicture;
+        endfor;
+    endfor;
 enddef;
