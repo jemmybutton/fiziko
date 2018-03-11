@@ -1774,6 +1774,8 @@ vardef sortList (expr listToSort) =
         fi;
         if nPre > 0:
             preList := preList & ", ";
+        else:
+            preList := "";
         fi;
         if nPost > 1:
             postList := sortList(postList);
@@ -1788,7 +1790,7 @@ vardef knot (expr p, w) (text orderList) =
     path slidingSegment, pathSegments[];
     pair intTimes[];
     numeric timeToSave, intersections[], b, e, n;
-    picture segmentPicture;
+    picture layerPicture[];
     string layerContents[];
     for i := 0 step 1 until length(p):
         slidingSegment := subpath (i, i + 1) of p;
@@ -1853,16 +1855,24 @@ vardef knot (expr p, w) (text orderList) =
         appendList0(layerContents, n, 1);
         appendList(layersList, 0, 1);
     fi;
-    for i := scantokens(sortList(layersList)):
-        for j := scantokens(layerContents[i]):
-            segmentPicture := image(
-                save drawTubeEnds;
-                boolean drawTubeEnds;
-                drawTubeEnds := false;
-                draw tube.l(pathSegments[j])(w);
-                );
-            fill tubeOutline withcolor white;
-            draw segmentPicture;
+    image(
+        for i := scantokens(sortList(layersList)):
+            layerPicture[i] := image(
+                for j := scantokens(layerContents[i]):
+                    save drawTubeEnds;
+                    boolean drawTubeEnds;
+                    drawTubeEnds := false;
+                    draw tube.l(pathSegments[j])(w);
+                    for k := scantokens(sortList(layersList)):
+                        if k<i:
+                            layerPicture[k] := layerPicture[k] maskedWith tubeOutline;
+                        fi;
+                    endfor;
+                endfor;
+            );
         endfor;
-    endfor;
+        for i := scantokens(sortList(layersList)):
+            draw layerPicture[i];
+        endfor;
+    )
 enddef;
