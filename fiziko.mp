@@ -1716,27 +1716,44 @@ enddef;
 % This part is related to knots
 %
 
-vardef appendList@#(suffix listName)(expr valueToAdd, whereToAdd) =
-    save v;
+vardef appendList@#(suffix listName)(expr valueToAdd, whereToAdd, omitDuplicates) =
+    save v, valueExists;
     string v;
-    if not string listName:
-        string listName;
+    boolean valueExists;
+    valueExists := false;
+    if str @# = "":
+        if not string listName:
+            string listName;
+        fi;
+    else:
+        if not string listName0:
+            string listName[];
+        fi;
     fi;
     if unknown listName@#:
         listName@# := "";
     fi;
-    if string valueToAdd:
-        v := valueToAdd;
-    else:
-        v := decimal(valueToAdd);
+    if omitDuplicates:
+        for i=scantokens(listName@#):
+            if (i = valueToAdd):
+                valueExists := true;
+            fi;
+        endfor;
     fi;
-    if length(listName@#) = 0:
-        listName@# := v;
-    else:
-        if (whereToAdd = 1):
-            listName@# := listName@# & ", " & v;
+    if not valueExists:
+        if string valueToAdd:
+            v := valueToAdd;
         else:
-            listName@# := v & ", " & listName@#;
+            v := decimal(valueToAdd);
+        fi;
+        if length(listName@#) = 0:
+            listName@# := v;
+        else:
+            if (whereToAdd = 1):
+                listName@# := listName@# & ", " & v;
+            else:
+                listName@# := v & ", " & listName@#;
+            fi;
         fi;
     fi;
 enddef;
@@ -1755,10 +1772,10 @@ vardef sortList (expr listToSort) =
             pivot := i;
         fi;
         if (i < pivot):
-            appendList (preList, i, -1);
+            appendList (preList, i, -1, false);
             nPre := nPre + 1;
         else:
-            appendList (postList, i, -1);
+            appendList (postList, i, -1, false);
             nPost := nPost + 1;
         fi;
         if lastValue > i:
@@ -1785,76 +1802,85 @@ vardef sortList (expr listToSort) =
     rv
 enddef;
 
-vardef knot (expr p, w) (text orderList) =
-    save slidingSegment, pathSegments, intTimes, timeToSave, numberOfSegments, intersections, intersectionsList, layerContents, layersList, b, e, n, layerContents, segmentPicture;
-    path slidingSegment, pathSegments[];
+vardef knotFromStrands (suffix knotName) =
+    save slidingSegment, pathSegments, intTimes, timeToSave, numberOfSegments, totalNumberOfSegments, intersections, intersectionsList, layerContents, layersList, b, e, n, layerContents, segmentPicture;
+    path inspectedPath, slidingSegment, pathSegments[];
     pair intTimes[];
-    numeric timeToSave, intersections[], b, e, n;
+    numeric timeToSave, intersections[], numberOfSegments[], totalNumberOfSegments, b, e, n;
     picture layerPicture[];
     string layerContents[];
-    for i := 0 step 1 until length(p):
-        slidingSegment := subpath (i, i + 1) of p;
-        intTimes0 := (p firstIntersectionTimes slidingSegment);
-        intTimes1 := (reverse(p) firstIntersectionTimes slidingSegment);
-        if (ypart(intTimes0) > 1/1000)
-            and (xpart(intTimes0) > 1/1000)
-            and (ypart(intTimes0) < length(slidingSegment) - 1/1000)
-            and (xpart(intTimes0) < length(p) - 1/1000):
-            timeToSave := xpart(intTimes0);
-            appendList(intersectionsList, timeToSave, 1);
-        elseif (ypart(intTimes1) > 1/1000)
-            and (xpart(intTimes1) > 1/1000)
-            and (ypart(intTimes1) < length(slidingSegment) - 1/1000)
-            and (xpart(intTimes1) < length(p) - 1/1000):
-            timeToSave := length(p) - xpart(intTimes1);
-            appendList(intersectionsList, timeToSave, 1);
-        fi;
-    endfor;
-    if known intersectionsList:
-        numberOfSegments := 0;
-        for i := scantokens(sortList(intersectionsList)):
-            numberOfSegments := numberOfSegments + 1;
-            intersections[numberOfSegments] := i;
-        endfor;
-        intersections[0] := 0;
-        intersections[numberOfSegments + 1] := length(p);
-        for i := 1 step 1 until numberOfSegments:
-            if (i > 1):
-                b := 1/2[intersections[i-1], intersections[i]];
-            else:
-                b := 0;
-            fi;
-            if (i < numberOfSegments):
-                e := 1/2[intersections[i], intersections[i+1]];
-            else:
-                e := length(p);
-            fi;
-            pathSegments[i] := subpath (b, e) of p;
-        endfor;
-    else:
-        numberOfSegments := 1;
-        pathSegments1 := p;
-    fi;
-    n := 0;
-    for i := orderList:
-        n := n + 1;
-        if (n <= numberOfSegments):
-            appendList[i](layerContents, n, 1);
-            appendList(layersList, i, 1);
-        fi;
-    endfor;
-    if n > 0:
-        if n < numberOfSegments:
-            for i := n + 1 step 1 until numberOfSegments:
-                appendList0(layerContents, i, 1);
+    totalNumberOfSegments := 0;
+    for sNa := 1 step 1 until knotName.nStrands:
+        inspectedPath := knotName.strandPath[sNa];
+        for sNb := 1 step 1 until knotName.nStrands:
+            for i := -1/2 step 1/2 until length(knotName.strandPath[sNb]) + 1/2:
+                slidingSegment := subpath (i, i + 1) of knotName.strandPath[sNb];
+                intTimes0 := (inspectedPath firstIntersectionTimes slidingSegment);
+                intTimes1 := (reverse(inspectedPath) firstIntersectionTimes slidingSegment);
+                if (ypart(intTimes0) > 1/500)
+                    and (xpart(intTimes0) > 1/500)
+                    and (ypart(intTimes0) < length(slidingSegment) - 1/500)
+                    and (xpart(intTimes0) < length(inspectedPath) - 1/500):
+                    timeToSave := xpart(intTimes0);
+                    appendList[sNa](intersectionsList, timeToSave, 1, true);
+                elseif (ypart(intTimes1) > 1/500)
+                    and (xpart(intTimes1) > 1/500)
+                    and (ypart(intTimes1) < length(slidingSegment) - 1/500)
+                    and (xpart(intTimes1) < length(inspectedPath) - 1/500):
+                    timeToSave := length(inspectedPath) - xpart(intTimes1);
+                    appendList[sNa](intersectionsList, timeToSave, 1, true);
+                fi;
             endfor;
-            appendList(layersList, 0, 1);
+        endfor;
+        if known intersectionsList[sNa]:
+            numberOfSegments[sNa] := 0;
+            for i := scantokens(sortList(intersectionsList[sNa])):
+                numberOfSegments[sNa] := numberOfSegments[sNa] + 1;
+                intersections[numberOfSegments[sNa]] := i;
+            endfor;
+            intersections[0] := 0;
+            intersections[numberOfSegments[sNa] + 1] := length(knotName.strandPath[sNa]);
+            for i := 1 step 1 until numberOfSegments[sNa]:
+                totalNumberOfSegments := totalNumberOfSegments + 1;
+                if (i > 1):
+                    b := 1/2[intersections[i-1], intersections[i]];
+                else:
+                    b := 0;
+                fi;
+                if (i < numberOfSegments[sNa]):
+                    e := 1/2[intersections[i], intersections[i+1]];
+                else:
+                    e := length(inspectedPath);
+                fi;
+                pathSegments[totalNumberOfSegments] := subpath (b, e) of inspectedPath;
+            endfor;
+        else:
+            totalNumberOfSegments := totalNumberOfSegments + 1;
+            numberOfSegments[sNa] := 1;
+            pathSegments[totalNumberOfSegments] := inspectedPath;
         fi;
-    else:
-        n := n + 1;
-        appendList0(layerContents, n, 1);
-        appendList(layersList, 0, 1);
-    fi;
+        n := 0;
+        for i := scantokens(knotName.intLayers[sNa]):
+            n := n + 1;
+            if (n <= numberOfSegments[sNa]):
+                appendList[i](layerContents, totalNumberOfSegments - numberOfSegments[sNa] + n, 1, true);
+                appendList(layersList, i, 1, true);
+            fi;
+        endfor;
+        if n > 0:
+            if n < numberOfSegments[sNa]:
+                for i := n + 1 step 1 until numberOfSegments[sNa]:
+                    appendList0(layerContents, totalNumberOfSegments - numberOfSegments[sNa] + i, 1, true);
+                endfor;
+                appendList(layersList, 0, 1, true);
+            fi;
+        else:
+            for i := 1 step 1 until numberOfSegments[sNa]:
+                appendList0(layerContents, totalNumberOfSegments - numberOfSegments[sNa] + i, 1, true);
+            endfor;
+            appendList(layersList, 0, 1, true);
+        fi;
+    endfor;
     image(
         for i := scantokens(sortList(layersList)):
             layerPicture[i] := image(
@@ -1862,7 +1888,7 @@ vardef knot (expr p, w) (text orderList) =
                     save drawTubeEnds;
                     boolean drawTubeEnds;
                     drawTubeEnds := false;
-                    draw tube.l(pathSegments[j])(w);
+                    draw tube.l(pathSegments[j])(1/6cm);
                     for k := scantokens(sortList(layersList)):
                         if k<i:
                             layerPicture[k] := layerPicture[k] maskedWith tubeOutline;
@@ -1875,4 +1901,26 @@ vardef knot (expr p, w) (text orderList) =
             draw layerPicture[i];
         endfor;
     )
+enddef;
+
+vardef addStrandToKnot (suffix knotName) (expr p, w, intersectionLayers) =
+    save n;
+    if not known knotName.nStrands:
+        numeric knotName.nStrands;
+        knotName.nStrands := 0;
+    fi;
+    if not path knotName.strandPath0:
+        path knotName.strandPath[];
+    fi;
+    if not known knotName.strandWidth0:
+        numeric knotName.strandWidth[];
+    fi;
+    if not string knotName.intLayers0:
+        string knotName.intLayers[];
+    fi;
+    knotName.nStrands := knotName.nStrands + 1;
+    n := knotName.nStrands;
+    knotName.strandPath[n] := p;
+    knotName.strandWidth[n] := w;
+    knotName.intLayers[n] := intersectionLayers;
 enddef;
