@@ -614,7 +614,15 @@ vardef tube.e (expr p)(text offsetFunction)=
     q2 := offsetPathGenerate (q0, q1, 0);
     q3 := offsetPathGenerate (q0, q1 yscaled -1, 0);
     tubeOutline := q3--reverse(q2)--cycle;
-    tubeOutline
+    if not drawTubeEnds:
+        image(
+            draw q2 withpen thinpen;
+            draw q3 withpen thinpen;
+            )
+    else:
+        tubeOutline := q3--reverse(q2)--cycle;
+        tubeOutline
+    fi
 enddef;
 
 %
@@ -1803,15 +1811,17 @@ vardef sortList (expr listToSort) =
 enddef;
 
 vardef knotFromStrands (suffix knotName) =
-    save slidingSegment, pathSegments, intTimes, timeToSave, numberOfSegments, totalNumberOfSegments, intersections, intersectionsList, layerContents, layersList, b, e, n, layerContents, segmentPicture;
+    save slidingSegment, pathSegments, intTimes, tSegWidth, tSegStyle, timeToSave, numberOfSegments, segmentWidth, totalNumberOfSegments, intersections, intersectionsList, layerContents, layersList, b, e, n, layerContents, segmentPicture;
     path inspectedPath, slidingSegment, pathSegments[];
     pair intTimes[];
-    numeric timeToSave, intersections[], numberOfSegments[], totalNumberOfSegments, b, e, n;
+    numeric timeToSave, intersections[], numberOfSegments[], segmentWidth[], totalNumberOfSegments, tSegWidth, b, e, n;
     picture layerPicture[];
-    string layerContents[];
+    string layerContents[], segmentStyle[], tSegStyle;
     totalNumberOfSegments := 0;
     for sNa := 1 step 1 until knotName.nStrands:
         inspectedPath := knotName.strandPath[sNa];
+        tSegWidth := knotName.strandWidth[sNa];
+        tSegStyle := knotName.strandStyle[sNa];
         for sNb := 1 step 1 until knotName.nStrands:
             for i := -1/2 step 1/2 until length(knotName.strandPath[sNb]) + 1/2:
                 slidingSegment := subpath (i, i + 1) of knotName.strandPath[sNb];
@@ -1853,11 +1863,15 @@ vardef knotFromStrands (suffix knotName) =
                     e := length(inspectedPath);
                 fi;
                 pathSegments[totalNumberOfSegments] := subpath (b, e) of inspectedPath;
+                segmentWidth[totalNumberOfSegments] := tSegWidth;
+                segmentStyle[totalNumberOfSegments] := tSegStyle;
             endfor;
         else:
             totalNumberOfSegments := totalNumberOfSegments + 1;
             numberOfSegments[sNa] := 1;
             pathSegments[totalNumberOfSegments] := inspectedPath;
+            segmentWidth[totalNumberOfSegments] := tSegWidth;
+            segmentStyle[totalNumberOfSegments] := tSegStyle;
         fi;
         n := 0;
         for i := scantokens(knotName.intLayers[sNa]):
@@ -1888,7 +1902,7 @@ vardef knotFromStrands (suffix knotName) =
                     save drawTubeEnds;
                     boolean drawTubeEnds;
                     drawTubeEnds := false;
-                    draw tube.l(pathSegments[j])(1/6cm);
+                    draw tube.scantokens(segmentStyle[j])(pathSegments[j])(segmentWidth[j]) if segmentStyle[j] = "e": withpen thickpen fi;
                     for k := scantokens(sortList(layersList)):
                         if k<i:
                             layerPicture[k] := layerPicture[k] maskedWith tubeOutline;
@@ -1903,7 +1917,7 @@ vardef knotFromStrands (suffix knotName) =
     )
 enddef;
 
-vardef addStrandToKnot (suffix knotName) (expr p, w, intersectionLayers) =
+vardef addStrandToKnot (suffix knotName) (expr p, w, s, intersectionLayers) =
     save n;
     if not known knotName.nStrands:
         numeric knotName.nStrands;
@@ -1912,8 +1926,11 @@ vardef addStrandToKnot (suffix knotName) (expr p, w, intersectionLayers) =
     if not path knotName.strandPath0:
         path knotName.strandPath[];
     fi;
-    if not known knotName.strandWidth0:
+    if not numeric knotName.strandWidth0:
         numeric knotName.strandWidth[];
+    fi;
+    if not string knotName.strandStyle0:
+        string knotName.strandStyle[];
     fi;
     if not string knotName.intLayers0:
         string knotName.intLayers[];
@@ -1922,5 +1939,6 @@ vardef addStrandToKnot (suffix knotName) (expr p, w, intersectionLayers) =
     n := knotName.nStrands;
     knotName.strandPath[n] := p;
     knotName.strandWidth[n] := w;
+    knotName.strandStyle[n] := s;
     knotName.intLayers[n] := intersectionLayers;
 enddef;
