@@ -1823,22 +1823,22 @@ vardef knotFromStrands (suffix knotName) =
         tSegWidth := knotName.strandWidth[sNa];
         tSegStyle := knotName.strandStyle[sNa];
         for sNb := 1 step 1 until knotName.nStrands:
-            for i := -1/2 step 1/2 until length(knotName.strandPath[sNb]) + 1/2:
+            for i := -1/2 step 1/2 until length(knotName.strandPath[sNb]) - 1/2:
                 slidingSegment := subpath (i, i + 1) of knotName.strandPath[sNb];
                 intTimes0 := (inspectedPath firstIntersectionTimes slidingSegment);
                 intTimes1 := (reverse(inspectedPath) firstIntersectionTimes slidingSegment);
-                if (ypart(intTimes0) > 1/500)
-                    and (xpart(intTimes0) > 1/500)
-                    and (ypart(intTimes0) < length(slidingSegment) - 1/500)
-                    and (xpart(intTimes0) < length(inspectedPath) - 1/500):
+                if ((ypart(intTimes0) > 0) and (ypart(intTimes0) < length(slidingSegment) - 0))
+                    and ((xpart(intTimes0) > 0) and (xpart(intTimes0) < length(inspectedPath) - 0))
+                    and ((sNb <> sNa) or ((xpart(intTimes0) < i) or (xpart(intTimes0) > i + 1))):
                     timeToSave := xpart(intTimes0);
                     appendList[sNa](intersectionsList, timeToSave, 1, true);
-                elseif (ypart(intTimes1) > 1/500)
-                    and (xpart(intTimes1) > 1/500)
-                    and (ypart(intTimes1) < length(slidingSegment) - 1/500)
-                    and (xpart(intTimes1) < length(inspectedPath) - 1/500):
-                    timeToSave := length(inspectedPath) - xpart(intTimes1);
-                    appendList[sNa](intersectionsList, timeToSave, 1, true);
+                elseif (sNb = sNa):
+                    if ((ypart(intTimes1) > 0) and (ypart(intTimes1) < length(slidingSegment) - 0))
+                        and ((xpart(intTimes1) > 0) and (xpart(intTimes1) < length(inspectedPath) - 0))
+                        and ((length(inspectedPath) - xpart(intTimes1) < i) or (length(inspectedPath) - xpart(intTimes1) > i + 1)):
+                        timeToSave := length(inspectedPath) - xpart(intTimes1);
+                        appendList[sNa](intersectionsList, timeToSave, 1, true);
+                    fi;
                 fi;
             endfor;
         endfor;
