@@ -169,8 +169,12 @@ dashStrokeWidthStep := 1/5minDashStrokeWidth;
 
 % here we set global light direction
 
-pair lightDirection;
+pair lightDirection, lightDirectionVector;
 lightDirection := (-1/8pi, 1/8pi);
+lightDirectionVector := (sin(xpart(lightDirection)), sin(ypart(lightDirection)));
+
+boolean shadowsEnabled;
+shadowsEnabled := false;
 
 % all the shading algorithms need to know how close lines should be packed
 
@@ -390,7 +394,7 @@ vardef shadedEdge (expr p) =
                 * angleToLightness(
                     sphereAngleToAbsoulteAngle(
                         (angleRad(direction offsetPathTime of p), 1/2)
-                    )
+                    ), 0, point offsetPathTime of p
                 )
             ), 0);
     )
@@ -473,7 +477,7 @@ begingroup
                         angleOnTube,
                         angleRad(direction offsetPathTime of currentTubePath),
                         angleRad(direction offsetPathTime of tubeWidth yscaled 1/2)
-                        )))
+                        )), -abs(sin(angleOnTube)*w0), point offsetPathTime of currentPath)
                 ), 0);
             endfor;
         fi;
@@ -532,7 +536,7 @@ begingroup
                         arccos(pthdir*((offsetPathLength*2)-1)),
                         pathAngle,
                         tubeAngle)
-                    ))
+                    ), -sqrt(1 - (2offsetPathLength - 1)**2)*(1/2arclength(currentPath)), point offsetPathTime of currentPath)
                 )
             , 0);
         endfor;
@@ -651,7 +655,7 @@ vardef sphere.c (expr d) =
                 * angleToLightness(
                     sphereAngleToAbsoulteAngle(
                         (angleRad(direction offsetPathTime of currentCircle), currentRadius)
-                    )
+                    ), 0, point offsetPathTime of currentCircle
                 )
             ), 0);
         endfor;
@@ -718,7 +722,7 @@ vardef sphere.l (expr d, lat) =
                                     0
                                 fi
                                  + 1/2pi), 2abs(point offsetPathTime of currentPath)/(d+1))
-                            ))
+                            ), 0, point offsetPathTime of currentPath)
                         ), 0);
                 fi;
             fi;
@@ -762,9 +766,20 @@ enddef;
 % Once we get two angles at some point of some surface, we can compute light intensity there.
 %
 
-vardef angleToLightness (expr p) =
-    save returnValue;
-    returnValue := (cos(xpart(p) + xpart(lightDirection))++cos(ypart(p) - ypart(lightDirection)));
+vardef angleToLightness (expr p, d, q) =
+    save returnValue, shiftedShadowPath;
+    path shiftedShadowPath;
+    if shadowsEnabled:
+        for i := 0 step 1 until numberOfShadows:
+            shiftedShadowPath := shadowPath[i] shifted (lightDirectionVector scaled d);
+            if q isInside shiftedShadowPath:
+                returnValue := 1;
+            fi;
+        endfor;
+    fi;
+    if not known returnValue:
+        returnValue := (cos(xpart(p) + xpart(lightDirection))++cos(ypart(p) - ypart(lightDirection)));
+    fi;
     returnValue := angleToLightnessPP(returnValue);
     if returnValue > 1:
         1
@@ -1163,7 +1178,7 @@ vardef globe (expr s, lon, lat) =
                     * angleToLightness(
                         sphereAngleToAbsoulteAngle(
                             (angleRad(point offsetPathTime of lm) + 1/4pi, abs(point offsetPathTime of lm)/2s)
-                        )
+                        ), 0, point offsetPathTime of lm
                     )
                 ), 0);
             p1 := p1 maskedWith lm;
@@ -1422,6 +1437,7 @@ vardef weight.h (expr h) =
                 minDashStrokeWidth + minStrokeWidth
                 * angleToLightness(
                         (arccos(1 - offsetPathLength*2), 1/2pi)
+                        , 0, point offsetPathTime of q5
                 )
             ), 0);
     )
@@ -1540,7 +1556,7 @@ vardef pulleyWheel (expr d) =
                         * angleToLightness(
                             sphereAngleToAbsoulteAngle(
                                 (angleRad(direction offsetPathTime of fullcircle), i/4d)
-                            )
+                            ), 0, point offsetPathTime of fullcircle scaled i
                         )
                     ), 0);
             else:
@@ -1550,7 +1566,7 @@ vardef pulleyWheel (expr d) =
                         * angleToLightness(
                             sphereAngleToAbsoulteAngle(
                                 (angleRad(direction offsetPathTime of fullcircle) + pi, 1/2)
-                            )
+                            ), 0, point offsetPathTime of fullcircle scaled i
                         )
                     ), 0);
             fi;
@@ -1591,7 +1607,7 @@ vardef wheel (expr d, a) =
                         * angleToLightness(
                             sphereAngleToAbsoulteAngle(
                                 (angleRad(direction offsetPathTime of fullcircle) + pi, i/4d)
-                            )
+                            ), 0, point offsetPathTime of fullcircle scaled i
                         )
                     ), 0);
             endfor;
@@ -1766,7 +1782,7 @@ vardef appendList@#(suffix listName)(expr valueToAdd, whereToAdd, omitDuplicates
     fi;
 enddef;
 
-vardef sortList (expr listToSort) =
+vardef sortList (expr listToSort, ascending) =
     save nPre, nPost, pivot, isSorted, lastValue, preList, postList, rv;
     numeric nPre, nPost, pivot;
     boolean isSorted;
@@ -1774,19 +1790,23 @@ vardef sortList (expr listToSort) =
     nPre := 0;
     nPost := 0;
     isSorted := true;
-    lastValue := -infinity;
+    if ascending:
+        lastValue := -infinity;
+    else:
+        lastValue := infinity;
+    fi;
     for i=scantokens(listToSort):
         if (unknown pivot):
             pivot := i;
         fi;
-        if (i < pivot):
+        if ((i < pivot) and ascending) or ((i > pivot) and not ascending):
             appendList (preList, i, -1, false);
             nPre := nPre + 1;
         else:
             appendList (postList, i, -1, false);
             nPost := nPost + 1;
         fi;
-        if lastValue > i:
+        if ((lastValue > i) and ascending) or ((lastValue < i) and not ascending):
             isSorted := false;
         fi;
         lastValue := i;
@@ -1795,7 +1815,7 @@ vardef sortList (expr listToSort) =
         rv := listToSort;
     else:
         if nPre > 1:
-            preList := sortList(preList);
+            preList := sortList(preList, ascending);
         fi;
         if nPre > 0:
             preList := preList & ", ";
@@ -1803,7 +1823,7 @@ vardef sortList (expr listToSort) =
             preList := "";
         fi;
         if nPost > 1:
-            postList := sortList(postList);
+            postList := sortList(postList, ascending);
         fi;
         rv := preList & postList;
     fi;
@@ -1812,6 +1832,12 @@ enddef;
 
 vardef knotFromStrands (suffix knotName) =
     save slidingSegment, pathSegments, intTimes, tSegWidth, tSegStyle, timeToSave, numberOfSegments, segmentWidth, totalNumberOfSegments, intersections, intersectionsList, layerContents, layersList, b, e, n, layerContents, segmentPicture;
+    save shadowsEnabled, allShadowPaths, totalNumberOfShadows, numberOfShadows, shadowPath, tmpShadows;
+    boolean shadowsEnabled;
+    path shadowPath[], allShadowPaths[];
+    numeric numberOfShadows, totalNumberOfShadows;
+    totalNumberOfShadows := -1;
+    tmpShadows := -1;
     path inspectedPath, slidingSegment, pathSegments[];
     pair intTimes[];
     numeric timeToSave, intersections[], numberOfSegments[], segmentWidth[], totalNumberOfSegments, tSegWidth, b, e, n;
@@ -1844,7 +1870,7 @@ vardef knotFromStrands (suffix knotName) =
         endfor;
         if known intersectionsList[sNa]:
             numberOfSegments[sNa] := 0;
-            for i := scantokens(sortList(intersectionsList[sNa])):
+            for i := scantokens(sortList(intersectionsList[sNa], true)):
                 numberOfSegments[sNa] := numberOfSegments[sNa] + 1;
                 intersections[numberOfSegments[sNa]] := i;
             endfor;
@@ -1896,22 +1922,33 @@ vardef knotFromStrands (suffix knotName) =
         fi;
     endfor;
     image(
-        for i := scantokens(sortList(layersList)):
+        for i := scantokens(sortList(layersList, false)):
             layerPicture[i] := image(
                 for j := scantokens(layerContents[i]):
+                    numberOfShadows := -1;
+                    shadowsEnabled := false;
+                    for k := 0 step 1 until totalNumberOfShadows:
+                        if xpart((subpath (1/10, length(pathSegments[j]) - 1/10) of pathSegments[j])
+                            intersectiontimes allShadowPaths[k]) > 0:
+                            shadowsEnabled := true;
+                            numberOfShadows := numberOfShadows + 1;
+                            shadowPath[numberOfShadows] := allShadowPaths[k];
+                        fi;
+                    endfor;
                     save drawTubeEnds;
                     boolean drawTubeEnds;
                     drawTubeEnds := false;
                     draw tube.scantokens(segmentStyle[j])(pathSegments[j])(segmentWidth[j]) if segmentStyle[j] = "e": withpen thickpen fi;
-                    for k := scantokens(sortList(layersList)):
-                        if k<i:
-                            layerPicture[k] := layerPicture[k] maskedWith tubeOutline;
-                        fi;
-                    endfor;
+                    tmpShadows := tmpShadows + 1;
+                    allShadowPaths[tmpShadows] := tubeOutline;
                 endfor;
             );
+            for j := 0 step 1 until totalNumberOfShadows:
+                layerPicture[i] := layerPicture[i] maskedWith allShadowPaths[j];
+            endfor;
+            totalNumberOfShadows := tmpShadows;
         endfor;
-        for i := scantokens(sortList(layersList)):
+        for i := scantokens(sortList(layersList, true)):
             draw layerPicture[i];
         endfor;
     )
@@ -1941,4 +1978,28 @@ vardef addStrandToKnot (suffix knotName) (expr p, w, s, intersectionLayers) =
     knotName.strandWidth[n] := w;
     knotName.strandStyle[n] := s;
     knotName.intLayers[n] := intersectionLayers;
+enddef;
+
+primarydef a isInside p =
+begingroup
+    save ang, v, i, rv, pp;
+    boolean rv;
+    pair pp[];
+    ang := 0;
+    for i := 0 step 1/4 until (length(p)):
+        pp1 := (point i of p) - a;
+        pp2 := (point i + 1/4 of p) - a;
+        if (pp1 <> (0, 0)) and (pp2 <> (0, 0)):
+            v := angle(pp1) - angle(pp2);
+            if v > 180: v := v - 360; fi; if v < -180: v := v + 360; fi;
+            ang := ang + v;
+        fi;
+    endfor;
+    if abs(ang) > 355:
+        rv := true;
+    else:
+        rv := false;
+    fi;
+    rv
+endgroup
 enddef;
