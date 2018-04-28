@@ -448,9 +448,9 @@ enddef;
 
 def tubeGenerate (expr p, q, d, i) =
 begingroup
-    save w, bw, k, t, tubeWidth, sp, currentPath, currentTubePath;
-    numeric w[], bw[], t;
-    path tubeWidth, sp, currentPath, currentTubePath;
+    save w, bw, k, t, tubeWidth, sp, currentPath, currentTubePath, pathShadowCut, currentDepth, shiftedShadowPath;
+    numeric w[], bw[], t, currentDepth, pathShadowCut;
+    path tubeWidth, sp, currentPath, currentTubePath, shiftedShadowPath;
     tubeWidth := d yscaled 2;
     w0 := (ypart(urcorner(tubeWidth))) - 1/1000;
     w1 := (ypart(lrcorner(tubeWidth))) + 1/1000;
@@ -467,6 +467,23 @@ begingroup
             for k := 0 upto bw1:
                 currentPath := interpath (k/bw1, q, p);
                 angleOnTube := arccos(((k/bw1)*2) - 1);
+                currentDepth := -2w0+abs(sin(angleOnTube)*w0);
+                % In general, shadow precision depends on the number points on
+                % a path. But, instead of increasing number of points, we can
+                % simply put points at the edge of the shadow in advance.
+                if shadowsEnabled:
+                    for j := 0 step 1 until numberOfShadows:
+                        shiftedShadowPath := shadowPath[j] shifted (lightDirectionVector scaled currentDepth);
+                        pathShadowCut := xpart(currentPath intersectiontimes shiftedShadowPath);
+                        if (pathShadowCut > 1/5) and (pathShadowCut < length(currentPath) - 1/5):
+                            currentPath := (subpath (0, pathShadowCut - 1/10) of currentPath) .. (subpath (pathShadowCut + 1/10, length(currentPath)) of currentPath);
+                            pathShadowCut := xpart(reverse(currentPath) intersectiontimes shiftedShadowPath);
+                            if ((length(currentPath) - pathShadowCut) > 1/5) and ((length(currentPath) - pathShadowCut) < length(currentPath) - 1/5):
+                                currentPath := (subpath (0, (length(currentPath) - pathShadowCut) - 1/10) of currentPath) .. (subpath ((length(currentPath) - pathShadowCut) + 1/10, length(currentPath)) of currentPath);
+                            fi;
+                        fi;
+                    endfor;
+                fi;
                 thinBrushGenerate (currentPath,
                 offsetPathTemplate(currentPath, 0)(
                 minStrokeWidth
@@ -477,7 +494,7 @@ begingroup
                         angleOnTube,
                         angleRad(direction offsetPathTime of currentTubePath),
                         angleRad(direction offsetPathTime of tubeWidth yscaled 1/2)
-                        )), -abs(sin(angleOnTube)*w0), point offsetPathTime of currentPath)
+                        )), currentDepth, point offsetPathTime of currentPath)
                 ), 0);
             endfor;
         fi;
@@ -536,7 +553,7 @@ begingroup
                         arccos(pthdir*((offsetPathLength*2)-1)),
                         pathAngle,
                         tubeAngle)
-                    ), -sqrt(1 - (2offsetPathLength - 1)**2)*(1/2arclength(currentPath)), point offsetPathTime of currentPath)
+                    ), -2(1/2arclength(currentPath))+sqrt(1 - (2offsetPathLength - 1)**2)*(1/2arclength(currentPath)), point offsetPathTime of currentPath)
                 )
             , 0);
         endfor;
@@ -779,8 +796,8 @@ vardef angleToLightness (expr p, d, q) =
     fi;
     if not known returnValue:
         returnValue := (cos(xpart(p) + xpart(lightDirection))++cos(ypart(p) - ypart(lightDirection)));
+        returnValue := angleToLightnessPP(returnValue);
     fi;
-    returnValue := angleToLightnessPP(returnValue);
     if returnValue > 1:
         1
     else:
