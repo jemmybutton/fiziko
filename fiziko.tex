@@ -15,7 +15,7 @@ basicstyle=\scriptsize
 \usepackage{cclicenses}
 
 \author{Sergey Slyusarev}
-\title{``fiziko'' v. 0.1.1 package for MetaPost }
+\title{``fiziko'' v. 0.1.2 package for MetaPost }
 
 \begin{document}
 \maketitle
@@ -374,6 +374,27 @@ Returns a \texttt{picture} of a rectangular block of wood with its bottom-left c
     draw woodBlock(10cm, 1/2cm);
 \end{mplibcode}
 
+\subsection{woodenThing (\emph{path, angle})}
+Returns a \texttt{picture} of a wood texture at a given \texttt{angle} fitted into a given \texttt{path}.
+
+\begin{lstlisting}
+    path p, q;
+    p := dir(-60) scaled 1/2 -- dir(90) scaled 2/3 -- dir (-120) scaled 3/5 -- cycle;
+    for i := 1 step 1 until 6:
+        q := (p scaled 3/2cm) rotated (i*60);
+        draw woodenThing (q, i*60) shifted (2cm*i, 0);
+    endfor;
+\end{lstlisting}
+
+\begin{mplibcode}
+    path p, q;
+    p := dir(-60) scaled 1/2 -- dir(90) scaled 2/3 -- dir (-120) scaled 3/5 -- cycle;
+    for i := 1 step 1 until 6:
+        q := (p scaled 3/2cm) rotated (i*60);
+        draw woodenThing (q, i*60) shifted (2cm*i, 0);
+    endfor;
+\end{mplibcode}
+
 \subsection{globe (\emph{radius, longitude, latitude})}
 This macro returns a \texttt{picture} of the globe of specified \texttt{radius} centered at specific \texttt{longitude} and \texttt{latitude};
 
@@ -391,6 +412,54 @@ This macro returns a \texttt{picture} of the globe of specified \texttt{radius} 
     endfor;
 \end{mplibcode}
 
+\subsection{Knots}
+There are two macros to handle knot drawing: \texttt{addStrandToKnot} and \texttt{knotFromStrands}. Currently the algorithm is not especially stable.
+
+\subsubsection{addStrandToKnot (\emph{knotName}) (\emph{path, ropeWidth, ropeType, intersectionOrder})}
+This macro adds a strand to knot named \texttt{knotName} and returns nothing. Strand follows the given \texttt{path} and has a given \texttt{ropeWidth}. \texttt{ropeType} can be \texttt{"l"}, \texttt{"t"} (as in \texttt{tube.l} and \texttt{tube.t}) or \texttt{"e"} (for an unshaded strand). \texttt{intersectionOrder} is a string of comma separated numbers which represent a ``layer'' to which intersections along the strand go.
+
+\subsubsection{knotFromStrands (\emph{knotName})}
+This macro returns a picture of a knot with a given \texttt{knotName}.
+
+\begin{lstlisting}
+    path p[];
+    p1 := (dir(90)*4/3cm) {dir(0)} .. tension 3/2
+        .. (dir(90 + 120)*4/3cm){dir(90 + 30)} .. tension 3/2
+        .. (dir(90 - 120)*4/3cm){dir(-90 - 30)} .. tension 3/2 
+        .. cycle;
+    p1 := pathSubdivide(p1, 6);
+    p2 := (fullcircle scaled 3cm) shifted (0, -3/2cm);
+    p2 := pathSubdivide(p2, 4);
+    p3 := (fullcircle scaled 4cm);
+    p3 := pathSubdivide(p3, 4);
+    addStrandToKnot (theknot) (p1 shifted (4cm, -4cm), 1/5cm, "l", 
+        "-1, 1, -1, 1, -1, 1, -1, 1, -1");
+    addStrandToKnot (theknot) (p2 shifted (4cm, -4cm), 1/6cm, "l", 
+       "");
+    addStrandToKnot (theknot) (p3 shifted (4cm, -4cm), 1/7cm, "l", 
+       "-1, 1");
+    draw knotFromStrands (theknot);
+\end{lstlisting}
+
+\begin{mplibcode}
+    path p[];    path p[];
+    p1 := (dir(90)*4/3cm) {dir(0)} .. tension 3/2
+        .. (dir(90 + 120)*4/3cm){dir(90 + 30)} .. tension 3/2
+        .. (dir(90 - 120)*4/3cm){dir(-90 - 30)} .. tension 3/2 
+        .. cycle;
+    p1 := pathSubdivide(p1, 6);
+    p2 := (fullcircle scaled 3cm) shifted (0, -3/2cm);
+    p2 := pathSubdivide(p2, 4);
+    p3 := (fullcircle scaled 4cm);
+    p3 := pathSubdivide(p3, 4);
+    addStrandToKnot (theknot) (p1 shifted (4cm, -4cm), 1/5cm, "l", 
+        "-1, 1, -1, 1, -1, 1, -1, 1, -1");
+    addStrandToKnot (theknot) (p2 shifted (4cm, -4cm), 1/6cm, "l", 
+       "");
+    addStrandToKnot (theknot) (p3 shifted (4cm, -4cm), 1/7cm, "l", 
+       "-1, 1");
+    draw knotFromStrands (theknot);
+\end{mplibcode}
 
 \section{Other macros}
 Some macros that are not directly related to drawing are listed below

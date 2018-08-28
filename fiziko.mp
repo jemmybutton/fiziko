@@ -1766,7 +1766,10 @@ vardef woodenThing (expr thingOutline, woodAngle) =
     thingWoodBlock := woodBlock(xpart(urcorner(shiftedThing)), ypart(urcorner(shiftedThing)));
     clip thingWoodBlock to shiftedThing;
     thingWoodBlock := (thingWoodBlock shifted thingOrigin) rotated woodAngle;
-    thingWoodBlock
+    image(
+        draw thingWoodBlock;
+        draw thingOutline withpen thinpen;
+        )
 enddef;
 
 %
