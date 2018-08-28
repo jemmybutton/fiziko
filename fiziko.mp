@@ -1753,6 +1753,22 @@ vardef woodBlock (expr w, l) =
     ) if (l < w): xscaled -1 rotated -90 fi
 enddef;
 
+% woodenThing fits a woodBlock into thingOutline at a given woodAngle
+
+vardef woodenThing (expr thingOutline, woodAngle) =
+    save shiftedThing, thingOrigin, thingWoodBlock;
+    path shiftedThing;
+    pair thingOrigin;
+    picture thingWoodBlock;
+    shiftedThing := thingOutline rotated -woodAngle;
+    thingOrigin := llcorner(shiftedThing);
+    shiftedThing := shiftedThing shifted -thingOrigin;
+    thingWoodBlock := woodBlock(xpart(urcorner(shiftedThing)), ypart(urcorner(shiftedThing)));
+    clip thingWoodBlock to shiftedThing;
+    thingWoodBlock := (thingWoodBlock shifted thingOrigin) rotated woodAngle;
+    thingWoodBlock
+enddef;
+
 %
 % This part is related to knots
 %
