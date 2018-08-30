@@ -1935,7 +1935,7 @@ vardef knotFromStrands (suffix knotName) =
                     if (timeToAdd = length(inspectedPath)):
                         timeToAdd := 0;
                     fi;
-                    appendList[sNa](intersectionsList, timeToAdd, 1, true);
+                    appendList[sNa](intersectionsList, round(timeToAdd*10)/10, 1, true);
                 fi;
             endfor;
         endfor;
