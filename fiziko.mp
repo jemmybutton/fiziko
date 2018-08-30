@@ -1867,16 +1867,16 @@ vardef sortList (expr listToSort, ascending) =
 enddef;
 
 vardef knotFromStrands (suffix knotName) =
-    save slidingSegment, pathSegments, intTimes, tSegWidth, tSegStyle, timeToSave, numberOfSegments, segmentWidth, totalNumberOfSegments, intersections, intersectionsList, layerContents, layersList, b, e, n, layerContents, segmentPicture;
+    save slidingSegment, timeToAdd, pathSegments, intTimes, tSegWidth, tSegStyle, numberOfSegments, segmentWidth, totalNumberOfSegments, intersections, intersectionsList, layerContents, layersList, b, e, n, layerContents, segmentPicture;
     save shadowsEnabled, allShadowPaths, totalNumberOfShadows, numberOfShadows, shadowPath, tmpShadows;
     boolean shadowsEnabled;
     path shadowPath[], allShadowPaths[];
-    numeric numberOfShadows, totalNumberOfShadows;
+    numeric timeToAdd, numberOfShadows, totalNumberOfShadows;
     totalNumberOfShadows := -1;
     tmpShadows := -1;
     path inspectedPath, slidingSegment, pathSegments[];
     pair intTimes[];
-    numeric timeToSave, intersections[], numberOfSegments[], segmentWidth[], totalNumberOfSegments, tSegWidth, b, e, n;
+    numeric intersections[], numberOfSegments[], segmentWidth[], totalNumberOfSegments, tSegWidth, b, e, n;
     picture layerPicture[];
     string layerContents[], segmentStyle[], tSegStyle;
     totalNumberOfSegments := 0;
@@ -1885,22 +1885,57 @@ vardef knotFromStrands (suffix knotName) =
         tSegWidth := knotName.strandWidth[sNa];
         tSegStyle := knotName.strandStyle[sNa];
         for sNb := 1 step 1 until knotName.nStrands:
-            for i := -1/2 step 1/2 until length(knotName.strandPath[sNb]) - 1/2:
+            for i := -1/2 step 1/2 until length(knotName.strandPath[sNb]):
                 slidingSegment := subpath (i, i + 1) of knotName.strandPath[sNb];
                 intTimes0 := (inspectedPath firstIntersectionTimes slidingSegment);
                 intTimes1 := (reverse(inspectedPath) firstIntersectionTimes slidingSegment);
-                if ((ypart(intTimes0) > 0) and (ypart(intTimes0) < length(slidingSegment) - 0))
-                    and ((xpart(intTimes0) > 0) and (xpart(intTimes0) < length(inspectedPath) - 0))
-                    and ((sNb <> sNa) or ((xpart(intTimes0) < i) or (xpart(intTimes0) > i + 1))):
-                    timeToSave := xpart(intTimes0);
-                    appendList[sNa](intersectionsList, timeToSave, 1, true);
-                elseif (sNb = sNa):
-                    if ((ypart(intTimes1) > 0) and (ypart(intTimes1) < length(slidingSegment) - 0))
-                        and ((xpart(intTimes1) > 0) and (xpart(intTimes1) < length(inspectedPath) - 0))
-                        and ((length(inspectedPath) - xpart(intTimes1) < i) or (length(inspectedPath) - xpart(intTimes1) > i + 1)):
-                        timeToSave := length(inspectedPath) - xpart(intTimes1);
-                        appendList[sNa](intersectionsList, timeToSave, 1, true);
+                if (sNb = sNa):
+                    if (xpart(intTimes0) >= i)
+                        and (xpart(intTimes0) <= i + 1):
+                        intTimes0 := (-1, -1);
                     fi;
+                    if ((length(inspectedPath) - xpart(intTimes1)) >= i)
+                        and ((length(inspectedPath) - xpart(intTimes1)) <= i + 1):
+                        intTimes1 := (-1, -1);
+                    fi;
+                    if (i+1/2 >= length(inspectedPath)):
+                        if (xpart(intTimes0) <= 1/2)
+                            or (xpart(intTimes0) = length(inspectedPath)):
+                            intTimes0 := (-1, -1);
+                        fi;
+                        if ((length(inspectedPath) - xpart(intTimes1)) <= 1/2)
+                            or (xpart(intTimes1) = 0):
+                            intTimes1 := (-1, -1);
+                        fi;
+                    fi;
+                    if (i-1/2 <= length(inspectedPath)):
+                        if (xpart(intTimes0) >= (length(inspectedPath) - 1/2))
+                            or (xpart(intTimes0) = 0):
+                            intTimes0 := (-1, -1);
+                        fi;
+                        if ((length(inspectedPath) - xpart(intTimes1)) >= (length(inspectedPath) - 1/2))
+                            or (xpart(intTimes1) = length(inspectedPath)):
+                            intTimes1 := (-1, -1);
+                        fi;
+                    fi;
+                fi;
+                timeToAdd := -1;
+                if ((ypart(intTimes0) > 0) and (ypart(intTimes0) < length(slidingSegment)))
+                    and ((xpart(intTimes0) >= 0) and (xpart(intTimes0) <= length(inspectedPath)))
+                    and ((sNb <> sNa) or ((xpart(intTimes0) < i) or (xpart(intTimes0) > i + 1))):
+                    timeToAdd := xpart(intTimes0);
+                elseif (sNb = sNa):
+                    if ((ypart(intTimes1) > 0) and (ypart(intTimes1) < length(slidingSegment)))
+                        and ((xpart(intTimes1) >= 0) and (xpart(intTimes1) <= length(inspectedPath)))
+                        and ((length(inspectedPath) - xpart(intTimes1) < i) or (length(inspectedPath) - xpart(intTimes1) > i + 1)):
+                        timeToAdd := length(inspectedPath) - xpart(intTimes1);
+                    fi;
+                fi;
+                if (timeToAdd >= 0):
+                    if (timeToAdd = length(inspectedPath)):
+                        timeToAdd := 0;
+                    fi;
+                    appendList[sNa](intersectionsList, timeToAdd, 1, true);
                 fi;
             endfor;
         endfor;
@@ -1911,18 +1946,28 @@ vardef knotFromStrands (suffix knotName) =
                 intersections[numberOfSegments[sNa]] := i;
             endfor;
             intersections[0] := 0;
-            intersections[numberOfSegments[sNa] + 1] := length(knotName.strandPath[sNa]);
+            if (not cycle knotName.strandPath[sNa]):
+                intersections[numberOfSegments[sNa] + 1] := length(knotName.strandPath[sNa]);
+            fi;
             for i := 1 step 1 until numberOfSegments[sNa]:
                 totalNumberOfSegments := totalNumberOfSegments + 1;
                 if (i > 1):
                     b := 1/2[intersections[i-1], intersections[i]];
                 else:
-                    b := 0;
+                    if (not cycle knotName.strandPath[sNa]):
+                        b := 0;
+                    else:
+                        b := 1/2[intersections[numberOfSegments[sNa]] - length(knotName.strandPath[sNa]), intersections[i]];
+                    fi;
                 fi;
                 if (i < numberOfSegments[sNa]):
                     e := 1/2[intersections[i], intersections[i+1]];
                 else:
-                    e := length(inspectedPath);
+                    if (not cycle knotName.strandPath[sNa]):
+                        e := length(inspectedPath);
+                    else:
+                        e := 1/2[intersections[i], intersections[1] + length(knotName.strandPath[sNa])];
+                    fi;
                 fi;
                 pathSegments[totalNumberOfSegments] := subpath (b, e) of inspectedPath;
                 segmentWidth[totalNumberOfSegments] := tSegWidth;
