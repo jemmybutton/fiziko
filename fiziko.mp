@@ -155,17 +155,33 @@ enddef;
 % Offset path algorithm can subdivide original path in order to be more precise
 offsetPathSteps := 4;
 
-% We don't want to display strokes that are too thin to print. Default value
-% is subject to change when needed.
-minStrokeWidth := 1/4pt;
+% The following macro sets all the values related to minimal stroke width at once.
+% It can be used to easily redefine all of them.
+def defineMinStrokeWidth (expr msw) =
+    % We don't want to display strokes that are too thin to print. Default value
+    % is subject to change when needed.
+    minStrokeWidth := msw;
 
-% At some point it's useless to display even dashes
-minDashStrokeWidth := 1/4minStrokeWidth;
+    % At some point it's useless to display even dashes
+    minDashStrokeWidth := 1/4minStrokeWidth;
 
-% this value corresponds to particular dashing algorithm and is subject to change whenever this algorithm changes
-minDashStrokeLength := 3minStrokeWidth;
+    % this value corresponds to particular dashing algorithm and is subject to change whenever this algorithm changes
+    minDashStrokeLength := 3minStrokeWidth;
 
-dashStrokeWidthStep := 1/5minDashStrokeWidth;
+    dashStrokeWidthStep := 1/5minDashStrokeWidth;
+
+    % all the shading algorithms need to know how close lines should be packed
+    shadingDensity := 4minStrokeWidth;
+
+    % here are some pens
+    pen thinpen, thickpen, fatpen;
+
+    thinpen := pencircle scaled minStrokeWidth;
+    thickpen := pencircle scaled 3minStrokeWidth;
+    fatpen := pencircle scaled 6minStrokeWidth;
+enddef;
+
+defineMinStrokeWidth(1/4pt);
 
 % here we set global light direction
 
@@ -175,17 +191,6 @@ lightDirectionVector := (sin(xpart(lightDirection)), sin(ypart(lightDirection)))
 
 boolean shadowsEnabled;
 shadowsEnabled := false;
-
-% all the shading algorithms need to know how close lines should be packed
-
-shadingDensity := 4minStrokeWidth;
-
-% here are some pens
-pen thinpen, thickpen, fatpen;
-
-thinpen := pencircle scaled minStrokeWidth;
-thickpen := pencircle scaled 3minStrokeWidth;
-fatpen := pencircle scaled 6minStrokeWidth;
 
 %
 % To simplify further calculations we need subdivided original path
@@ -1657,7 +1662,7 @@ enddef;
 % variables are also here.
 %
 
-woodBlockRes := 3minStrokeWidth;
+woodBlockRes := 1/3mm;
 woodBlockDetail := 1/5;
 woodBlockYRdensity := 1/24;
 woodKnotAngle := 1/3pi;
@@ -1866,6 +1871,9 @@ vardef sortList (expr listToSort, ascending) =
     rv
 enddef;
 
+numeric knotStepSize;
+knotStepSize := 1/8;
+
 vardef knotFromStrands (suffix knotName) =
     save slidingSegment, timeToAdd, pathSegments, intTimes, tSegWidth, tSegStyle, numberOfSegments, segmentWidth, totalNumberOfSegments, intersections, intersectionsList, layerContents, layersList, b, e, n, layerContents, segmentPicture;
     save shadowsEnabled, allShadowPaths, totalNumberOfShadows, numberOfShadows, shadowPath, tmpShadows;
@@ -1885,35 +1893,35 @@ vardef knotFromStrands (suffix knotName) =
         tSegWidth := knotName.strandWidth[sNa];
         tSegStyle := knotName.strandStyle[sNa];
         for sNb := 1 step 1 until knotName.nStrands:
-            for i := -1/2 step 1/2 until length(knotName.strandPath[sNb]):
-                slidingSegment := subpath (i, i + 1) of knotName.strandPath[sNb];
+            for i := -knotStepSize step knotStepSize until length(knotName.strandPath[sNb]):
+                slidingSegment := subpath (i, i + 2knotStepSize) of knotName.strandPath[sNb];
                 intTimes0 := (inspectedPath firstIntersectionTimes slidingSegment);
                 intTimes1 := (reverse(inspectedPath) firstIntersectionTimes slidingSegment);
                 if (sNb = sNa):
                     if (xpart(intTimes0) >= i)
-                        and (xpart(intTimes0) <= i + 1):
+                        and (xpart(intTimes0) <= i + 2knotStepSize):
                         intTimes0 := (-1, -1);
                     fi;
                     if ((length(inspectedPath) - xpart(intTimes1)) >= i)
-                        and ((length(inspectedPath) - xpart(intTimes1)) <= i + 1):
+                        and ((length(inspectedPath) - xpart(intTimes1)) <= i + 2knotStepSize):
                         intTimes1 := (-1, -1);
                     fi;
-                    if (i+1/2 >= length(inspectedPath)):
-                        if (xpart(intTimes0) <= 1/2)
+                    if (i+knotStepSize >= length(inspectedPath)):
+                        if (xpart(intTimes0) <= knotStepSize)
                             or (xpart(intTimes0) = length(inspectedPath)):
                             intTimes0 := (-1, -1);
                         fi;
-                        if ((length(inspectedPath) - xpart(intTimes1)) <= 1/2)
+                        if ((length(inspectedPath) - xpart(intTimes1)) <= knotStepSize)
                             or (xpart(intTimes1) = 0):
                             intTimes1 := (-1, -1);
                         fi;
                     fi;
-                    if (i-1/2 <= length(inspectedPath)):
-                        if (xpart(intTimes0) >= (length(inspectedPath) - 1/2))
+                    if (i-knotStepSize <= length(inspectedPath)):
+                        if (xpart(intTimes0) >= (length(inspectedPath) - knotStepSize))
                             or (xpart(intTimes0) = 0):
                             intTimes0 := (-1, -1);
                         fi;
-                        if ((length(inspectedPath) - xpart(intTimes1)) >= (length(inspectedPath) - 1/2))
+                        if ((length(inspectedPath) - xpart(intTimes1)) >= (length(inspectedPath) - knotStepSize))
                             or (xpart(intTimes1) = length(inspectedPath)):
                             intTimes1 := (-1, -1);
                         fi;
@@ -1970,6 +1978,9 @@ vardef knotFromStrands (suffix knotName) =
                     fi;
                 fi;
                 pathSegments[totalNumberOfSegments] := subpath (b, e) of inspectedPath;
+                if (length(pathSegments[totalNumberOfSegments])<=2):
+                    pathSegments[totalNumberOfSegments] := pathSubdivide(pathSegments[totalNumberOfSegments], 2);
+                fi;
                 segmentWidth[totalNumberOfSegments] := tSegWidth;
                 segmentStyle[totalNumberOfSegments] := tSegStyle;
             endfor;
