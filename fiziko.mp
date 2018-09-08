@@ -453,9 +453,9 @@ enddef;
 
 def tubeGenerate (expr p, q, d, i) =
 begingroup
-    save w, bw, k, t, tubeWidth, sp, currentPath, currentTubePath, pathShadowCut, currentDepth, shiftedShadowPath;
-    numeric w[], bw[], t, currentDepth, pathShadowCut;
-    path tubeWidth, sp, currentPath, currentTubePath, shiftedShadowPath;
+    save w, bw, k, t, tubeWidth, sp, currentPath, currentTubePath, currentDepth;
+    numeric w[], bw[], t, currentDepth;
+    path tubeWidth, sp, currentPath, currentTubePath;
     tubeWidth := d yscaled 2;
     w0 := (ypart(urcorner(tubeWidth))) - 1/1000;
     w1 := (ypart(lrcorner(tubeWidth))) + 1/1000;
@@ -472,22 +472,9 @@ begingroup
             for k := 0 upto bw1:
                 currentPath := interpath (k/bw1, q, p);
                 angleOnTube := arccos(((k/bw1)*2) - 1);
-                currentDepth := -2w0+abs(sin(angleOnTube)*w0);
-                % In general, shadow precision depends on the number points on
-                % a path. But, instead of increasing number of points, we can
-                % simply put points at the edge of the shadow in advance.
+                currentDepth := -abs(sin(angleOnTube)*w0);
                 if shadowsEnabled:
-                    for j := 0 step 1 until numberOfShadows:
-                        shiftedShadowPath := shadowPath[j] shifted (lightDirectionVector scaled currentDepth);
-                        pathShadowCut := xpart(currentPath intersectiontimes shiftedShadowPath);
-                        if (pathShadowCut > 1/5) and (pathShadowCut < length(currentPath) - 1/5):
-                            currentPath := (subpath (0, pathShadowCut - 1/10) of currentPath) .. (subpath (pathShadowCut + 1/10, length(currentPath)) of currentPath);
-                            pathShadowCut := xpart(reverse(currentPath) intersectiontimes shiftedShadowPath);
-                            if ((length(currentPath) - pathShadowCut) > 1/5) and ((length(currentPath) - pathShadowCut) < length(currentPath) - 1/5):
-                                currentPath := (subpath (0, (length(currentPath) - pathShadowCut) - 1/10) of currentPath) .. (subpath ((length(currentPath) - pathShadowCut) + 1/10, length(currentPath)) of currentPath);
-                            fi;
-                        fi;
-                    endfor;
+                    currentPath := shadowCut(currentPath, currentDepth);
                 fi;
                 thinBrushGenerate (currentPath,
                 offsetPathTemplate(currentPath, 0)(
@@ -656,20 +643,24 @@ enddef;
 %
 
 vardef sphere.c (expr d) =
-    save currentCircle, origCircle, currentRadius, order, circleThickness;
+    save currentCircle, origCircle, currentRadius, currentDepth, order, circleThickness;
     path currentCircle, origCircle;
-    numeric currentRadius, order;
+    numeric currentRadius, currentDepth, order;
     origCircle := fullcircle;
     order := 2**ceiling(log((1/2d)/shadingDensity, 2));
     image(
         draw fullcircle scaled d withpen thinpen;
         for i := 1 upto order:
-        currentCircle := origCircle scaled (i*(d/order)) rotated uniformdeviate (1/4pi);
         currentRadius := i/order;
+        currentCircle := origCircle scaled (currentRadius*d) rotated uniformdeviate (1/4pi);
         if odd(i):
             circleThickness := minStrokeWidth * ((abs(d - (shadingDensity*order)))/order);
         else:
             circleThickness := minStrokeWidth;
+        fi;
+        currentDepth:= -(1-sqrt(1-currentRadius**2))*(1/2d);
+        if shadowsEnabled:
+            currentCircle := shadowCut(currentCircle, currentDepth);
         fi;
         thinBrushGenerate (currentCircle,
             offsetPathTemplate (currentCircle, 0) (
@@ -677,7 +668,7 @@ vardef sphere.c (expr d) =
                 * angleToLightness(
                     sphereAngleToAbsoulteAngle(
                         (angleRad(direction offsetPathTime of currentCircle), currentRadius)
-                    ), 0, point offsetPathTime of currentCircle
+                    ), currentDepth, point offsetPathTime of currentCircle
                 )
             ), 0);
         endfor;
@@ -793,7 +784,7 @@ vardef angleToLightness (expr p, d, q) =
     path shiftedShadowPath;
     if shadowsEnabled:
         for i := 0 step 1 until numberOfShadows:
-            shiftedShadowPath := shadowPath[i] shifted (lightDirectionVector scaled d);
+            shiftedShadowPath := shadowPath[i] shifted (lightDirectionVector scaled (d-shadowDepth[i]));
             if q isInside shiftedShadowPath:
                 returnValue := 1;
             fi;
@@ -812,6 +803,36 @@ enddef;
 
 vardef angleToLightnessPP (expr v) =
     v**3
+enddef;
+
+% Shadows are global
+
+path shadowPath[];
+numeric shadowDepth[];
+
+% Shadows either require high path resolution, or some points
+% on a path in just the right place for shadows.
+% This macro adds such points.
+
+vardef shadowCut (expr pathToCut, currentDepth)=
+    save shiftedShadowPath, pathShadowIntersection, pathShadowCut, currentPath;
+    path shiftedShadowPath, currentPath;
+    pair pathShadowIntersection;
+    numeric pathShadowCut;
+    currentPath := pathToCut;
+    for j := 0 step 1 until numberOfShadows:
+        shiftedShadowPath := shadowPath[j] shifted (lightDirectionVector scaled (currentDepth - shadowDepth[j]));
+        forever:
+            pathShadowIntersection := shiftedShadowPath firstIntersectionTimes currentPath;
+            pathShadowCut := ypart(pathShadowIntersection);
+            if (pathShadowCut > 1/10) and (pathShadowCut < length(currentPath) - 1/10):
+                currentPath := (subpath (0, pathShadowCut - 1/20) of currentPath) .. (subpath (pathShadowCut + 1/20, length(currentPath)) of currentPath);
+            fi;
+            shiftedShadowPath := subpath (xpart(pathShadowIntersection) + 1/5, length(shiftedShadowPath)) of shiftedShadowPath;
+            exitif (pathShadowCut = -1);
+        endfor;
+    endfor;
+    currentPath
 enddef;
 
 %
@@ -1876,9 +1897,9 @@ knotStepSize := 1/8;
 
 vardef knotFromStrands (suffix knotName) =
     save slidingSegment, timeToAdd, pathSegments, intTimes, tSegWidth, tSegStyle, numberOfSegments, segmentWidth, totalNumberOfSegments, intersections, intersectionsList, layerContents, layersList, b, e, n, layerContents, segmentPicture;
-    save shadowsEnabled, allShadowPaths, totalNumberOfShadows, numberOfShadows, shadowPath, tmpShadows;
+    save shadowsEnabled, allShadowPaths, totalNumberOfShadows, numberOfShadows, tmpShadows;
     boolean shadowsEnabled;
-    path shadowPath[], allShadowPaths[];
+    path allShadowPaths[];
     numeric timeToAdd, numberOfShadows, totalNumberOfShadows;
     totalNumberOfShadows := -1;
     tmpShadows := -1;
@@ -2025,6 +2046,7 @@ vardef knotFromStrands (suffix knotName) =
                             shadowsEnabled := true;
                             numberOfShadows := numberOfShadows + 1;
                             shadowPath[numberOfShadows] := allShadowPaths[k];
+                            shadowDepth[numberOfShadows] := 1/2segmentWidth[j];
                         fi;
                     endfor;
                     save drawTubeEnds;
