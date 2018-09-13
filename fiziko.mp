@@ -161,9 +161,10 @@ def defineMinStrokeWidth (expr msw) =
     % We don't want to display strokes that are too thin to print. Default value
     % is subject to change when needed.
     minStrokeWidth := msw;
+    maxShadingStrokeWidth := 2minStrokeWidth;
 
     % At some point it's useless to display even dashes
-    minDashStrokeWidth := 1/4minStrokeWidth;
+    minDashStrokeWidth := 1/3minStrokeWidth;
 
     % this value corresponds to particular dashing algorithm and is subject to change whenever this algorithm changes
     minDashStrokeLength := 3minStrokeWidth;
@@ -171,7 +172,7 @@ def defineMinStrokeWidth (expr msw) =
     dashStrokeWidthStep := 1/5minDashStrokeWidth;
 
     % all the shading algorithms need to know how close lines should be packed
-    shadingDensity := 4minStrokeWidth;
+    shadingDensity := 3maxShadingStrokeWidth;
 
     % here are some pens
     pen thinpen, thickpen, fatpen;
@@ -181,7 +182,7 @@ def defineMinStrokeWidth (expr msw) =
     fatpen := pencircle scaled 6minStrokeWidth;
 enddef;
 
-defineMinStrokeWidth(1/4pt);
+defineMinStrokeWidth(1/5pt);
 
 % here we set global light direction
 
@@ -278,17 +279,21 @@ vardef offsetPathGenerate (expr p, q, i) =
     c1 := precontrol i of p;
     c2 := point i of p;
     c3 := postcontrol i of p;
-    if abs(c1 - c2) = 0:
+    if abs(c1-c2) = 0:
         c1 := c2 shifted (c2-c3);
     fi;
-    if abs(c3 - c2) = 0:
+    if abs(c3-c2) = 0:
         c3 := c2 shifted (c2-c1);
     fi;
     if (abs(c1-c2) > 0) and (abs(c2-c3) > 0):
-        d1 := unitvector(c1 - c2) rotated -90;
-        d2 := unitvector(c2 - c3) rotated -90;
-        pl1 := (unitvector(c2-c1)--unitvector(c1-c2)) scaled arclength(subpath (i - 1/2, i + 1/2) of p) shifted (point i of p shifted (d1 scaled ypart(point i of q)));
-        pl2 := (unitvector(c2-c3)--unitvector(c3-c2)) scaled arclength(subpath (i - 1/2, i + 1/2) of p) shifted (point i of p shifted (d2 scaled ypart(point i of q)));
+        d1 := unitvector(c1-c2) rotated -90;
+        d2 := unitvector(c2-c3) rotated -90;
+        pl1 := (unitvector(c2-c1)--unitvector(c1-c2))
+            scaled arclength(subpath (i - 1/2, i + 1/2) of p)
+            shifted (point i of p shifted (d1 scaled ypart(point i of q)));
+        pl2 := (unitvector(c2-c3)--unitvector(c3-c2))
+            scaled arclength(subpath (i - 1/2, i + 1/2) of p)
+            shifted (point i of p shifted (d2 scaled ypart(point i of q)));
         if (abs(angle(d1) - angle(d2)) > 2) and (xpart(pl1 intersectiontimes pl2) > 0):
             c4 := pl1 intersectionpoint pl2;
         else:
@@ -306,7 +311,10 @@ vardef offsetPathGenerate (expr p, q, i) =
         c3 := precontrol 1 of ps;
         c4 := point 1 of ps;
         c5 := point 0 of returnPath;
-        if (abs(c3-c4)>0) and (abs(c1-c2)>0) and (abs(c1-c4)>0) and (abs(direction i of q) > 0):
+        if (abs(c3-c4)>0)
+            and (abs(c1-c2)>0)
+            and (abs(c1-c4)>0)
+            and (abs(direction i of q) > 0):
             c6 := c4 shifted (unitvector(c4 - c3) rotated 90 scaled ypart(point i + 1 of q));
             c7 := (c2 - c1) scaled (abs(c5-c6)/abs(c1-c4)) rotated angle(direction i of q) shifted c5;
             c8 := (c3 - c4) scaled (abs(c5-c6)/abs(c1-c4)) rotated angle(direction i + 1 of q) shifted c6;
@@ -341,11 +349,17 @@ begingroup
     w0 := (ypart(urcorner(bt)));
     w1 := (ypart(lrcorner(bt)));
     t := cutPathTime(bt, minStrokeWidth);
-    if ((w0 > minStrokeWidth) and (w1 < minStrokeWidth) and (t > 0) and (arclength(p) > minDashStrokeLength) and (i < 10)):
+    if ((w0 > minStrokeWidth)
+        and (w1 < minStrokeWidth)
+        and (t > 0)
+        and (t < length(p))
+        and (arclength(p) > minDashStrokeLength)
+        and (i < 10)):
         brushGenerate (subpath (0, t) of p, subpath (0, t) of q, i + 1);
         brushGenerate (subpath (t, length(p)) of p, subpath (t, length(q)) of q, i + 1);
-    else:
-        if (w0 > 99/100minStrokeWidth) and (w1 > 99/100minStrokeWidth):
+    elseif (arclength(p) > 0):
+        if (w0 > 99/100minStrokeWidth)
+            and (w1 > 99/100minStrokeWidth):
             bp1 := offsetPathGenerate (p, q yscaled 1/2, 0);
             bp2 := offsetPathGenerate (p, q yscaled -1/2, 0);
             fill bp1 -- reverse(bp2) -- cycle;
@@ -372,7 +386,9 @@ begingroup
     t := cutPathTime(bt, w2);
     bp1 := subpath (0, t) of p;
     bp2 := subpath (t, length(p)) of p;
-    if (((w0 - w1) > dashStrokeWidthStep) and (arclength(bp1) > minDashStrokeLength) and (arclength(bp2) > minDashStrokeLength) and (i < 15)):
+    if (((w0 - w1) > dashStrokeWidthStep) and (i < 15))
+        and ((arclength(bp1) > minDashStrokeLength)
+        or (arclength(bp2) > minDashStrokeLength)):
         thinBrushGenerate (bp1, subpath (0, t) of q, i + 1);
         thinBrushGenerate (bp2, subpath (t, length(q)) of q, i + 1);
     else:
@@ -472,14 +488,14 @@ begingroup
             for k := 0 upto bw1:
                 currentPath := interpath (k/bw1, q, p);
                 angleOnTube := arccos(((k/bw1)*2) - 1);
-                currentDepth := -abs(sin(angleOnTube)*w0);
+                currentDepth := -abs((1-sin(angleOnTube))*w0);
                 if shadowsEnabled:
                     currentPath := shadowCut(currentPath, currentDepth);
                 fi;
-                thinBrushGenerate (currentPath,
+                brushGenerate (currentPath,
                 offsetPathTemplate(currentPath, 0)(
-                minStrokeWidth
-                if odd (k): * ((abs(ypart(point offsetPathTime of tubeWidth) - (shadingDensity*(bw1/2))))/(bw1/2)) fi
+                maxShadingStrokeWidth
+                if odd (k): * 1/2(2abs(ypart(point offsetPathTime of tubeWidth)/bw1) - shadingDensity) fi
                 * orderFade(xpart(unitvector(direction offsetPathTime of tubeWidth yscaled 1/2cos(angleOnTube))), k)
                 * angleToLightness(
                     tubeAngleToAbsoulteAngle((
@@ -535,10 +551,10 @@ begingroup
             k := i*(arclength(lpth)/l1);
             currentPath := point (arctime k of lpth) of spth -- point (arctime k of lpth) of lpth;
             currentPath := offsetPathSubdivide(currentPath);
-            thinBrushGenerate (
+            brushGenerate (
                 currentPath,
                 offsetPathTemplate(currentPath, 0)(
-                    minStrokeWidth
+                    maxShadingStrokeWidth
                     * orderFade(offsetPathLength[1/l1, l2], j)
                     * angleToLightness(
                     tubeAngleToAbsoulteAngle((
@@ -654,15 +670,15 @@ vardef sphere.c (expr d) =
         currentRadius := i/order;
         currentCircle := origCircle scaled (currentRadius*d) rotated uniformdeviate (1/4pi);
         if odd(i):
-            circleThickness := minStrokeWidth * ((abs(d - (shadingDensity*order)))/order);
+            circleThickness := maxShadingStrokeWidth * ((abs(d - (shadingDensity*order)))/order);
         else:
-            circleThickness := minStrokeWidth;
+            circleThickness := maxShadingStrokeWidth;
         fi;
         currentDepth:= -(1-sqrt(1-currentRadius**2))*(1/2d);
         if shadowsEnabled:
             currentCircle := shadowCut(currentCircle, currentDepth);
         fi;
-        thinBrushGenerate (currentCircle,
+        brushGenerate (currentCircle,
             offsetPathTemplate (currentCircle, 0) (
                 circleThickness
                 * angleToLightness(
@@ -718,9 +734,9 @@ vardef sphere.l (expr d, lat) =
                 if (x > -1) and (arclength(p1) > 0):
                     currentPath := (p1 scaled (d*sin(sphlat)) yscaled sind(lat)) shifted (0, 1/2d*cos(sphlat)*cosd(lat));
                     currentPath := offsetPathSubdivide(currentPath);
-                    thinBrushGenerate(currentPath,
+                    brushGenerate(currentPath,
                         offsetPathTemplate(currentPath, 0)(
-                        minStrokeWidth * orderFade(
+                        maxShadingStrokeWidth * orderFade(
                         sqrt(1 - (abs(
                         (ypart(point offsetPathTime of currentPath)/(1/2d),
                         1 - abs(1 - abs(xpart(point offsetPathTime of currentPath)/(1/2d)))**(abs(sind(lat)))
@@ -1639,9 +1655,9 @@ vardef wheel (expr d, a) =
     picture pc[];
     path p[];
     r1 := 2/8d;
-    r2 := d-2shadingDensity;
+    r2 := d-6minStrokeWidth;
     r3 := 7/8d-2shadingDensity;
-    if r1 > 4shadingDensity:
+    if r1 > 3shadingDensity:
         pc1 := image(
             for i := r1 step 2shadingDensity until r3:
                 thinBrushGenerate (fullcircle scaled i,
@@ -1897,9 +1913,9 @@ knotStepSize := 1/8;
 
 vardef knotFromStrands (suffix knotName) =
     save slidingSegment, timeToAdd, pathSegments, intTimes, tSegWidth, tSegStyle, numberOfSegments, segmentWidth, totalNumberOfSegments, intersections, intersectionsList, layerContents, layersList, b, e, n, layerContents, segmentPicture;
-    save shadowsEnabled, allShadowPaths, totalNumberOfShadows, numberOfShadows, tmpShadows;
+    save shadowsEnabled, allShadowPaths, totalNumberOfShadows, numberOfShadows, shadowPath, tmpShadows;
     boolean shadowsEnabled;
-    path allShadowPaths[];
+    path shadowPath[], allShadowPaths[];
     numeric timeToAdd, numberOfShadows, totalNumberOfShadows;
     totalNumberOfShadows := -1;
     tmpShadows := -1;
@@ -2046,7 +2062,7 @@ vardef knotFromStrands (suffix knotName) =
                             shadowsEnabled := true;
                             numberOfShadows := numberOfShadows + 1;
                             shadowPath[numberOfShadows] := allShadowPaths[k];
-                            shadowDepth[numberOfShadows] := 1/2segmentWidth[j];
+                            shadowDepth[numberOfShadows] := 3/2segmentWidth[j];
                         fi;
                     endfor;
                     save drawTubeEnds;
