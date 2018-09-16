@@ -1,4 +1,4 @@
-%    fiziko 0.1.2
+%    fiziko 0.1.3
 %    MetaPost library for physics textbook illustrations
 %    Copyright 2018 Sergey Slyusarev
 %
@@ -98,6 +98,32 @@ begingroup
     fi;
     if xpart(t1) < 0: t3 := t2; fi;
     t3
+endgroup
+enddef;
+
+% This checks if point a is inside of closed path p
+
+primarydef a isInside p =
+begingroup
+    save ang, v, i, rv, pp;
+    boolean rv;
+    pair pp[];
+    ang := 0;
+    for i := 0 step 1/4 until (length(p)):
+        pp1 := (point i of p) - a;
+        pp2 := (point i + 1/4 of p) - a;
+        if (pp1 <> (0, 0)) and (pp2 <> (0, 0)):
+            v := angle(pp1) - angle(pp2);
+            if v > 180: v := v - 360; fi; if v < -180: v := v + 360; fi;
+            ang := ang + v;
+        fi;
+    endfor;
+    if abs(ang) > 355:
+        rv := true;
+    else:
+        rv := false;
+    fi;
+    rv
 endgroup
 enddef;
 
@@ -376,7 +402,7 @@ enddef;
 
 def thinBrushGenerate (expr p, q, i) =
 begingroup
-    save w, bp, bt, t, h;
+    save w, bp, bt, t, h, linecap;
     numeric w[], t[];
     path bp[], bt;
     bt := q;
@@ -392,7 +418,7 @@ begingroup
         thinBrushGenerate (bp1, subpath (0, t) of q, i + 1);
         thinBrushGenerate (bp2, subpath (t, length(q)) of q, i + 1);
     else:
-        linecap:=butt;
+        linecap := butt;
         if (w2 > minStrokeWidth):
             w2 := minStrokeWidth;
         fi;
@@ -737,10 +763,16 @@ vardef sphere.l (expr d, lat) =
                     brushGenerate(currentPath,
                         offsetPathTemplate(currentPath, 0)(
                         maxShadingStrokeWidth * orderFade(
-                        sqrt(1 - (abs(
-                        (ypart(point offsetPathTime of currentPath)/(1/2d),
-                        1 - abs(1 - abs(xpart(point offsetPathTime of currentPath)/(1/2d)))**(abs(sind(lat)))
-                        )))**2)
+                            sqrt(1 -
+                                abs(
+                                    ypart(point offsetPathTime of currentPath)/(1/2d),
+                                    1 - abs(
+                                            1 - abs(
+                                                    xpart(point offsetPathTime of currentPath)
+                                                        /(1/2d)
+                                                    )
+                                            )**abs(sind(lat))
+                                    )**2)
                         , nline)
                         * angleToLightness(
                             sphereAngleToAbsoulteAngle((
@@ -988,7 +1020,16 @@ vardef isoLines (suffix xy)(expr cs, l, s) =
                         iL := cLine (xy)((i, j), (0, 0), 0, cs) scaled s;
                         brushGenerate (reverse(iL),
                         offsetPathTemplate(iL, 0)(
-                        1/16minStrokeWidth/((1/64 + 2(if (offsetPathTime < length(iL) - 1): (offsetPathTime - floor(offsetPathTime))[v[floor(sqB + offsetPathTime)], v[ceiling(sqB + offsetPathTime)]] else: 1 fi)))
+                        1/16minStrokeWidth
+                            /(1/64 + 2(
+                                if (offsetPathTime < length(iL) - 1):
+                                    (offsetPathTime - floor(offsetPathTime))
+                                        [v[floor(sqB + offsetPathTime)],
+                                        v[ceiling(sqB + offsetPathTime)]]
+                                else:
+                                    1
+                                fi
+                                ))
                         )
                         , 0);
                     fi;
@@ -1809,14 +1850,17 @@ vardef woodenThing (expr thingOutline, woodAngle) =
     clip thingWoodBlock to shiftedThing;
     thingWoodBlock := (thingWoodBlock shifted thingOrigin) rotated woodAngle;
     image(
-        draw thingWoodBlock;
         draw thingOutline withpen thinpen;
+        draw thingWoodBlock;
         )
 enddef;
 
 %
 % This part is related to knots
 %
+
+% lists are only used in knots so far.
+% The following two macros are taken from byrne.mp
 
 vardef appendList@#(suffix listName)(expr valueToAdd, whereToAdd, omitDuplicates) =
     save v, valueExists;
@@ -1908,6 +1952,9 @@ vardef sortList (expr listToSort, ascending) =
     rv
 enddef;
 
+
+% When looking for intersections, knot is browsed with knotStepSize step.
+% Affects nothing interesting.
 numeric knotStepSize;
 knotStepSize := 1/8;
 
@@ -2108,28 +2155,4 @@ vardef addStrandToKnot (suffix knotName) (expr p, w, s, intersectionLayers) =
     knotName.strandWidth[n] := w;
     knotName.strandStyle[n] := s;
     knotName.intLayers[n] := intersectionLayers;
-enddef;
-
-primarydef a isInside p =
-begingroup
-    save ang, v, i, rv, pp;
-    boolean rv;
-    pair pp[];
-    ang := 0;
-    for i := 0 step 1/4 until (length(p)):
-        pp1 := (point i of p) - a;
-        pp2 := (point i + 1/4 of p) - a;
-        if (pp1 <> (0, 0)) and (pp2 <> (0, 0)):
-            v := angle(pp1) - angle(pp2);
-            if v > 180: v := v - 360; fi; if v < -180: v := v + 360; fi;
-            ang := ang + v;
-        fi;
-    endfor;
-    if abs(ang) > 355:
-        rv := true;
-    else:
-        rv := false;
-    fi;
-    rv
-endgroup
 enddef;
