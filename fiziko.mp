@@ -372,13 +372,16 @@ begingroup
     numeric w[], t[];
     path bp[], bt;
     bt := q;
+%    bp1 := offsetPathGenerate (p, q yscaled 1/2, 0);
+%    bp2 := offsetPathGenerate (p, q yscaled -1/2, 0);
+%    fill bp1 -- reverse(bp2) -- cycle;
     w0 := (ypart(urcorner(bt)));
     w1 := (ypart(lrcorner(bt)));
     t := cutPathTime(bt, minStrokeWidth);
     if ((w0 > minStrokeWidth)
         and (w1 < minStrokeWidth)
         and (t > 0)
-        and (t < length(p))
+    and (t < length(p))
         and (arclength(p) > minDashStrokeLength)
         and (i < 10)):
         brushGenerate (subpath (0, t) of p, subpath (0, t) of q, i + 1);
@@ -521,8 +524,8 @@ begingroup
                 brushGenerate (currentPath,
                 offsetPathTemplate(currentPath, 0)(
                 maxShadingStrokeWidth
-                if odd (k): * 1/2(2abs(ypart(point offsetPathTime of tubeWidth)/bw1) - shadingDensity) fi
-                * orderFade(xpart(unitvector(direction offsetPathTime of tubeWidth yscaled 1/2cos(angleOnTube))), k)
+                if odd (k): * (abs(ypart(point offsetPathTime of tubeWidth)/bw1) - 1/2shadingDensity) fi
+                %* orderFade(xpart(unitvector(direction offsetPathTime of tubeWidth yscaled 1/2cos(angleOnTube))), k) % why was it even here?
                 * angleToLightness(
                     tubeAngleToAbsoulteAngle((
                         angleOnTube,
