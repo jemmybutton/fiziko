@@ -212,9 +212,13 @@ defineMinStrokeWidth(1/5pt);
 
 % here we set global light direction
 
-pair lightDirection, lightDirectionVector;
-lightDirection := (-1/8pi, 1/8pi);
-lightDirectionVector := (sin(xpart(lightDirection)), sin(ypart(lightDirection)));
+def defineLightDirection (expr ldx, ldy) =
+    pair lightDirection, lightDirectionVector;
+    lightDirection := (ldx, ldy);
+    lightDirectionVector := (sin(xpart(lightDirection)), sin(ypart(lightDirection)));
+enddef;
+
+defineLightDirection(-1/8pi, 1/8pi);
 
 boolean shadowsEnabled;
 shadowsEnabled := false;
@@ -372,16 +376,13 @@ begingroup
     numeric w[], t[];
     path bp[], bt;
     bt := q;
-%    bp1 := offsetPathGenerate (p, q yscaled 1/2, 0);
-%    bp2 := offsetPathGenerate (p, q yscaled -1/2, 0);
-%    fill bp1 -- reverse(bp2) -- cycle;
     w0 := (ypart(urcorner(bt)));
     w1 := (ypart(lrcorner(bt)));
     t := cutPathTime(bt, minStrokeWidth);
     if ((w0 > minStrokeWidth)
         and (w1 < minStrokeWidth)
         and (t > 0)
-    and (t < length(p))
+        and (t < length(p))
         and (arclength(p) > minDashStrokeLength)
         and (i < 10)):
         brushGenerate (subpath (0, t) of p, subpath (0, t) of q, i + 1);
@@ -1296,7 +1297,7 @@ enddef;
 % Scaling below some level, dependent on minStrokeWidth, simplifies image
 %
 
-eyescale = 1/2cm;
+eyescale := 1/2cm;
 
 vardef eye (expr a) =
     save s, eyelids, pupil, eyeball, eyelash, loopstep, p, o;
