@@ -1,6 +1,6 @@
 %    fiziko 0.1.3
 %    MetaPost library for physics textbook illustrations
-%    Copyright 2018 Sergey Slyusarev
+%    Copyright 2019 Sergey Slyusarev
 %
 %    This program is free software: you can redistribute it and/or modify
 %    it under the terms of the GNU General Public License as published by
@@ -15,6 +15,7 @@
 %    You should have received a copy of the GNU General Public License
 %    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+% https://github.com/jemmybutton/fiziko
 
 %
 % Here we define some things of general interest

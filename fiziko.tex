@@ -15,7 +15,7 @@ basicstyle=\scriptsize
 \usepackage{cclicenses}
 
 \author{Sergey Slyusarev}
-\title{``fiziko'' v. 0.1.3 package for MetaPost }
+\title{``fiziko'' v. 0.1.3 package for MetaPost}
 
 \begin{document}
 \maketitle
@@ -29,6 +29,8 @@ This document describes a bunch of macros provided by ``fiziko'' library for Met
 This document is distributed under CC-BY-SA 4.0 license 
 
 \cc\bysa
+
+https://github.com/jemmybutton/fiziko
 
 \end{centering}
 
@@ -751,44 +753,6 @@ Line 3 describe initial setup. Line 4 is problem's solution. Lines 8--11 set all
     label.lft (btex $x$ etex, 1/2[q2, q3]);
 \end{mplibcode}
 
-\subsection{Klein bottle}
-
-\begin{lstlisting}
-    path p;
-    p := (0, 0){dir(90)} .. (-1/3cm, 3/2cm) 
-         .. (0, 7/2cm) .. (3/2cm, 2cm) .. {dir(-90)}(0, 0);
-    p := pathSubdivide(p, 6);
-    vardef oplmod (expr x) = 2*(x**3/4) enddef;
-    draw tube.l(p)(
-       (1/4 
-       + (
-               (
-                   (sqrt(1-(oplmod(offsetPathLength) - 1)**2) - 1)
-                   *(1-oplmod(offsetPathLength))
-               ) - oplmod(offsetPathLength)
-           )/7
-       )*6cm
-    );
-\end{lstlisting}
-
-\begin{mplibcode}
-    path p;
-    p := (0, 0){dir(90)} .. (-1/3cm, 3/2cm) 
-         .. (0, 7/2cm) .. (3/2cm, 2cm) .. {dir(-90)}(0, 0);
-    p := pathSubdivide(p, 6);
-    vardef oplmod (expr x) = 2*(x**3/4) enddef;
-    draw tube.l(p)(
-       (1/4 
-       + (
-               (
-                   (sqrt(1-(oplmod(offsetPathLength) - 1)**2) - 1)
-                   *(1-oplmod(offsetPathLength))
-               ) - oplmod(offsetPathLength)
-           )/7
-       )*6cm
-    );
-\end{mplibcode}
-
 \subsection{Weight on a cart}
 
 \begin{lstlisting}
@@ -815,6 +779,62 @@ Line 3 describe initial setup. Line 4 is problem's solution. Lines 8--11 set all
     draw wheel (r, 0) shifted (r, 1/2r);
     draw wheel (r, 0) shifted (l-r, 1/2r);
     draw weight.s(h) shifted (1/2l, r + w);
+\end{mplibcode}
+
+\subsection{Some knots}
+
+\begin{lstlisting}
+    path p[];
+    p1 := (dir(90)*4/3cm) {dir(0)} .. tension 3/2 
+        .. (dir(90 + 120)*4/3cm){dir(90 + 30)} .. tension 3/2 
+        .. (dir(90 - 120)*4/3cm){dir(-90 - 30)} .. tension 3/2 
+        .. cycle;
+    p1 := p1 scaled 6/5;
+    addStrandToKnot (primeOne) (p1, 1/4cm, "l", "1, -1, 1"); 
+    draw knotFromStrands (primeOne);
+    p2 := (0, 2cm) .. (1/2cm, 3/2cm) .. (-1/2cm, 0) 
+        .. (1/2cm, -2/3cm) .. (4/3cm, 0) .. (0, 17/12cm) 
+        .. (-4/3cm, 0) .. (-1/2cm, -2/3cm) .. (1/2cm, 0) 
+        .. (-1/2cm, 3/2cm) .. cycle;
+    p2 := p2 scaled 6/5;
+    addStrandToKnot (primeTwo) (p2, 1/4cm, "l", "1, -1, 1, -1, 1");
+    draw knotFromStrands (primeTwo) shifted (4cm, 0);
+    p3 := (dir(0)*3/2cm) .. (dir(1*72)*2/3cm) 
+        .. (dir(2*72)*3/2cm) .. (dir(3*72)*2/3cm) 
+        .. (dir(4*72)*3/2cm) .. (dir(0)*2/3cm) 
+        ..  (dir(1*72)*3/2cm) .. (dir(2*72)*2/3cm) 
+        .. (dir(3*72)*3/2cm) .. (dir(4*72)*2/3cm) 
+        .. cycle;
+    p3 := (p3 rotated (72/4)) scaled 6/5;
+    addStrandToKnot (primeThree) (p3, 1/4cm, "l", "-1, 1, -1, 1, -1");
+    draw knotFromStrands (primeThree) shifted (8cm, 0);
+\end{lstlisting}
+
+\begin{mplibcode}
+    path p[];
+    p1 := (dir(90)*4/3cm) {dir(0)} .. tension 3/2 
+        .. (dir(90 + 120)*4/3cm){dir(90 + 30)} .. tension 3/2 
+        .. (dir(90 - 120)*4/3cm){dir(-90 - 30)} .. tension 3/2 
+        .. cycle;
+    p1 := p1 scaled 6/5;
+    addStrandToKnot (primeOne) (p1, 1/4cm, "l", "1, -1, 1"); 
+    draw knotFromStrands (primeOne);
+    p2 := (0, 2cm) .. (1/2cm, 3/2cm) .. (-1/2cm, 0) 
+        .. (1/2cm, -2/3cm) .. (4/3cm, 0) .. (0, 17/12cm) 
+        .. (-4/3cm, 0) .. (-1/2cm, -2/3cm) .. (1/2cm, 0) 
+        .. (-1/2cm, 3/2cm) .. cycle;
+    p2 := p2 scaled 6/5;
+    addStrandToKnot (primeTwo) (p2, 1/4cm, "l", "1, -1, 1, -1, 1");
+    draw knotFromStrands (primeTwo) shifted (4cm, -2cm);
+    p3 := (dir(0)*3/2cm) .. (dir(1*72)*2/3cm) 
+        .. (dir(2*72)*3/2cm) .. (dir(3*72)*2/3cm) 
+        .. (dir(4*72)*3/2cm) .. (dir(0)*2/3cm) 
+        ..  (dir(1*72)*3/2cm) .. (dir(2*72)*2/3cm) 
+        .. (dir(3*72)*3/2cm) .. (dir(4*72)*2/3cm) 
+        .. cycle;
+    p3 := (p3 rotated (72/4)) scaled 6/5;
+    addStrandToKnot (primeThree) (p3, 1/4cm, "l", "-1, 1, -1, 1, -1");
+    draw knotFromStrands (primeThree) shifted (8cm, 0);
 \end{mplibcode}
 
 
