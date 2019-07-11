@@ -1,4 +1,4 @@
-%    fiziko 0.1.3
+%    fiziko 0.1.4
 %    MetaPost library for physics textbook illustrations
 %    Copyright 2019 Sergey Slyusarev
 %
@@ -128,6 +128,32 @@ begingroup
 endgroup
 enddef;
 
+% rotation in radians
+
+primarydef somethingToRotate radRotated radAngle =
+    somethingToRotate rotated ((radAngle/pi)*180)
+enddef;
+
+%
+% some 3D stuff
+%
+
+% this one's from byrne.mp
+
+primarydef colorone dotprodXYZ colortwo =
+begingroup
+    save xp, yp, zp;
+    numeric xp[], yp[], zp[];
+    xp1 := (redpart colorone);
+    yp1 := (greenpart colorone);
+    zp1 := (bluepart colorone);
+    xp2 := (redpart colortwo);
+    yp2 := (greenpart colortwo);
+    zp2 := (bluepart colortwo);
+    xp1*xp2 + yp1*yp2 + zp1*zp2
+endgroup
+enddef;
+
 %
 % sometimes it's useful to put some arrows along the path. this macro puts them
 % in the middles of the segments that have length no less than midArrowLimit;
@@ -214,9 +240,31 @@ defineMinStrokeWidth(1/5pt);
 % here we set global light direction
 
 def defineLightDirection (expr ldx, ldy) =
-    pair lightDirection, lightDirectionVector;
+    pair lightDirection;
+    color lightDirectionVectorXYZ;
     lightDirection := (ldx, ldy);
-    lightDirectionVector := (sin(xpart(lightDirection)), sin(ypart(lightDirection)));
+    lightDirectionVectorXYZ := (0, 0, 1);
+    lightDirectionVectorXYZ := rotateXYZaround.x(lightDirectionVectorXYZ, ldy);
+    lightDirectionVectorXYZ := rotateXYZaround.y(lightDirectionVectorXYZ, ldx);
+enddef;
+
+vardef rotateXYZaround@# (expr p, a) =
+    save partProj, rv;
+    pair partProj;
+    color rv;
+    if str @# = "x":
+        partProj := (greenpart(p), bluepart(p)) radRotated -a;
+        rv := (redpart(p), xpart(partProj), ypart(partProj));
+    elseif str @# = "y":
+        partProj := (redpart(p), bluepart(p)) radRotated -a;
+        rv := (xpart(partProj), greenpart(p), ypart(partProj));
+    elseif str @# = "z":
+        partProj := (redpart(p), greenpart(p)) radRotated -a;
+        rv := (xpart(partProj), ypart(partProj), bluepart(p));
+    else:
+        errmessage("What axis is " & str @# & "?");
+    fi;
+    rv
 enddef;
 
 defineLightDirection(-1/8pi, 1/8pi);
@@ -443,9 +491,9 @@ vardef shadedEdge (expr p) =
         brushGenerate (p,
             offsetPathTemplate (p, 0) (
                 1/2minStrokeWidth + 2*minStrokeWidth
-                * angleToLightness(
-                    sphereAngleToAbsoulteAngle(
-                        (angleRad(direction offsetPathTime of p), 1/2)
+                * normalVectorToLightness(
+                    sphereAnglesToNormalVector(
+                        (angleRad(point offsetPathTime of p), arcsin(1/2))
                     ), 0, point offsetPathTime of p
                 )
             ), 0);
@@ -518,8 +566,8 @@ begingroup
             currentTubePath := interpath (1/2, q, p);
             for k := 0 upto bw1:
                 currentPath := interpath (k/bw1, q, p);
-                angleOnTube := arccos(((k/bw1)*2) - 1);
-                currentDepth := -abs((1-sin(angleOnTube))*w0);
+                angleOnTube := arcsin(((k/bw1)*2) - 1);
+                currentDepth := -abs((1-sin(angleOnTube + 1/2pi))*w0);
                 if shadowsEnabled:
                     currentPath := shadowCut(currentPath, currentDepth);
                 fi;
@@ -528,11 +576,11 @@ begingroup
                 maxShadingStrokeWidth
                 if odd (k): * (abs(ypart(point offsetPathTime of tubeWidth)/bw1) - 1/2shadingDensity) fi
                 %* orderFade(xpart(unitvector(direction offsetPathTime of tubeWidth yscaled 1/2cos(angleOnTube))), k) % why was it even here?
-                * angleToLightness(
-                    tubeAngleToAbsoulteAngle((
+                * normalVectorToLightness(
+                    tubeAnglesToNormalVector((
                         angleOnTube,
                         angleRad(direction offsetPathTime of currentTubePath),
-                        angleRad(direction offsetPathTime of tubeWidth yscaled 1/2)
+                        angleRad(direction offsetPathTime of (tubeWidth yscaled 1/2))
                         )), currentDepth, point offsetPathTime of currentPath)
                 ), 0);
             endfor;
@@ -587,12 +635,12 @@ begingroup
                 offsetPathTemplate(currentPath, 0)(
                     maxShadingStrokeWidth
                     * orderFade(offsetPathLength[1/l1, l2], j)
-                    * angleToLightness(
-                    tubeAngleToAbsoulteAngle((
-                        arccos(pthdir*((offsetPathLength*2)-1)),
-                        pathAngle,
-                        tubeAngle)
-                    ), -2(1/2arclength(currentPath))+sqrt(1 - (2offsetPathLength - 1)**2)*(1/2arclength(currentPath)), point offsetPathTime of currentPath)
+                    * normalVectorToLightness(
+                        tubeAnglesToNormalVector((
+                            arcsin(pthdir*((offsetPathLength*2)-1)),
+                            pathAngle,
+                            tubeAngle)
+                            ), -2(1/2arclength(currentPath))+sqrt(1 - (2offsetPathLength - 1)**2)*(1/2arclength(currentPath)), point offsetPathTime of currentPath)
                 )
             , 0);
         endfor;
@@ -604,19 +652,22 @@ enddef;
 %
 % This macro converts some measurements of point on tube to absolute angle.
 % Since there are three such measurements, macro gets them as as a single
-% argument of "color" type, in case it will eventually appear as a result
+% argument of "color" type, in case it would eventually appear as a result
 % of some other macro.
 %
+% redpart is the angle on the tube's circumference
+% greenpart is the angle of the tube path
+% bluepart is the angle of the tube's outline
+%
 
-vardef tubeAngleToAbsoulteAngle (expr p) =
-    save a;
-    numeric a[];
-    a1 := bluepart(p) + 1/2pi;
-    a2 := arccos(cos(redpart(p))*sin(a1));
-    a3 := greenpart(p) + 1/2pi;
-    a4 := arccos((cos(a1) * cos(a3) - cos(a2) * sin(a3))*(99/100));
-    a5 := arccos((cos(a1) * sin(a3) + cos(a2) * cos(a3))*(99/100));
-    (a5, a4)
+vardef tubeAnglesToNormalVector (expr p) =
+    save normalVector;
+    color normalVector;
+    normalVector := (0, 0, 1);
+    normalVector := rotateXYZaround.y(normalVector, -bluepart(p));
+    normalVector := rotateXYZaround.x(normalVector, redpart(p));
+    normalVector := rotateXYZaround.z(normalVector, -greenpart(p));
+    normalVector
 enddef;
 
 %
@@ -712,9 +763,9 @@ vardef sphere.c (expr d) =
         brushGenerate (currentCircle,
             offsetPathTemplate (currentCircle, 0) (
                 circleThickness
-                * angleToLightness(
-                    sphereAngleToAbsoulteAngle(
-                        (angleRad(direction offsetPathTime of currentCircle), currentRadius)
+                * normalVectorToLightness(
+                    sphereAnglesToNormalVector(
+                        (angleRad(point offsetPathTime of currentCircle), arcsin(currentRadius))
                     ), currentDepth, point offsetPathTime of currentCircle
                 )
             ), 0);
@@ -779,15 +830,15 @@ vardef sphere.l (expr d, lat) =
                                             )**abs(sind(lat))
                                     )**2)
                         , nline)
-                        * angleToLightness(
-                            sphereAngleToAbsoulteAngle((
+                        * normalVectorToLightness(
+                            sphereAnglesToNormalVector((
                                 (
                                 if (abs(point offsetPathTime of currentPath) > 0):
                                     angleRad(point offsetPathTime of currentPath)
                                 else:
                                     0
                                 fi
-                                 + 1/2pi), 2abs(point offsetPathTime of currentPath)/(d+1))
+                                ), arcsin(2abs(point offsetPathTime of currentPath)/(d+1)))
                             ), 0, point offsetPathTime of currentPath)
                         ), 0);
                 fi;
@@ -815,37 +866,38 @@ vardef orderFade (expr v, n)=
 enddef;
 
 %
-% This one converts point location on sphere to absolute angle
+% This one converts point location on sphere to normal vector
 %
 
-vardef sphereAngleToAbsoulteAngle (expr p) =
-    save a;
-    numeric a[];
-    a1 := xpart(p) - 1/2pi;
-    a2 := arcsin(ypart(p));
-    a3 := arccos(sin(a2)*cos(a1));
-    a4 := pi - arccos(sin(a2)*sin(a1));
-    (a3, a4)
+vardef sphereAnglesToNormalVector (expr p) =
+    save normalVector;
+    color normalVector;
+    normalVector := (0, 0, 1);
+    normalVector := rotateXYZaround.y(normalVector, ypart(p));
+    normalVector := rotateXYZaround.z(normalVector, -xpart(p));
+    normalVector
 enddef;
 
 %
 % Once we get two angles at some point of some surface, we can compute light intensity there.
 %
 
-vardef angleToLightness (expr p, d, q) =
+vardef normalVectorToLightness (expr normalVector, d, q) =
     save returnValue, shiftedShadowPath;
     path shiftedShadowPath;
     if shadowsEnabled:
         for i := 0 step 1 until numberOfShadows:
-            shiftedShadowPath := shadowPath[i] shifted (lightDirectionVector scaled (d-shadowDepth[i]));
+            shiftedShadowPath := shadowPath[i] shifted
+                ((redpart(lightDirectionVectorXYZ), greenpart(lightDirectionVectorXYZ))
+                    scaled ((d-shadowDepth[i])*bluepart(lightDirectionVectorXYZ)));
             if q isInside shiftedShadowPath:
                 returnValue := 1;
             fi;
         endfor;
     fi;
     if not known returnValue:
-        returnValue := (cos(xpart(p) + xpart(lightDirection))++cos(ypart(p) - ypart(lightDirection)));
-        returnValue := angleToLightnessPP(returnValue);
+        returnValue := 1 - (normalVector dotprodXYZ lightDirectionVectorXYZ);
+        returnValue := lightnessPP(returnValue);
     fi;
     if returnValue > 1:
         1
@@ -854,8 +906,8 @@ vardef angleToLightness (expr p, d, q) =
     fi
 enddef;
 
-vardef angleToLightnessPP (expr v) =
-    v**3
+vardef lightnessPP (expr v) =
+    v
 enddef;
 
 % Shadows are global
@@ -874,7 +926,9 @@ vardef shadowCut (expr pathToCut, currentDepth)=
     numeric pathShadowCut;
     currentPath := pathToCut;
     for j := 0 step 1 until numberOfShadows:
-        shiftedShadowPath := shadowPath[j] shifted (lightDirectionVector scaled (currentDepth - shadowDepth[j]));
+        shiftedShadowPath := shadowPath[j] shifted
+            ((redpart(lightDirectionVectorXYZ), greenpart(lightDirectionVectorXYZ))
+                scaled ((currentDepth - shadowDepth[j])*bluepart(lightDirectionVectorXYZ)));
         forever:
             pathShadowIntersection := shiftedShadowPath firstIntersectionTimes currentPath;
             pathShadowCut := ypart(pathShadowIntersection);
@@ -1256,16 +1310,16 @@ vardef globe (expr s, lon, lat) =
     picture p[];
     path lm;
     begingroup
-        save angleToLightnessPP;
-        vardef angleToLightnessPP (expr v) =
-            1/2(v**3)
+        save lightnessPP;
+        vardef lightnessPP (expr v) =
+            1/2v
         enddef;
         p1 := image(draw sphere.l(2s, lat));
-        vardef angleToLightnessPP (expr v) =
+        vardef lightnessPP (expr v) =
             if (abs(cos(sphlat)) > 7/8 + uniformdeviate (1/20)):
-                1/4(v**2)
+                1/4v
             else:
-                1/3(v**2) + 2/3
+                1/3v + 2/3
             fi
         enddef;
         p2 := image(draw sphere.l(2s, lat));
@@ -1280,9 +1334,9 @@ vardef globe (expr s, lon, lat) =
             thinBrushGenerate (lm,
                 offsetPathTemplate (lm, 0) (
                     2/3minStrokeWidth + 1/3minStrokeWidth
-                    * angleToLightness(
-                        sphereAngleToAbsoulteAngle(
-                            (angleRad(point offsetPathTime of lm) + 1/4pi, abs(point offsetPathTime of lm)/2s)
+                    * normalVectorToLightness(
+                        sphereAnglesToNormalVector(
+                            (angleRad(point offsetPathTime of lm), arcsin(abs(point offsetPathTime of lm)/2s))
                         ), 0, point offsetPathTime of lm
                     )
                 ), 0);
@@ -1537,14 +1591,6 @@ vardef weight.h (expr h) =
         ) maskedWith (q3 -- reverse(q2) -- (q2 yscaled 0 shifted (0, -h)) -- (reverse(q3) yscaled 0 shifted (0, -h)) -- cycle)
           maskedWith q6;
         draw shadedEdge(q6);
-        thinBrushGenerate (q5,
-            offsetPathTemplate (q5, 0) (
-                minDashStrokeWidth + minStrokeWidth
-                * angleToLightness(
-                        (arccos(1 - offsetPathLength*2), 1/2pi)
-                        , 0, point offsetPathTime of q5
-                )
-            ), 0);
     )
 enddef;
 
@@ -1658,9 +1704,9 @@ vardef pulleyWheel (expr d) =
                 thinBrushGenerate (fullcircle scaled i,
                     offsetPathTemplate (fullcircle scaled i, 0) (
                         2/3minStrokeWidth + minStrokeWidth
-                        * angleToLightness(
-                            sphereAngleToAbsoulteAngle(
-                                (angleRad(direction offsetPathTime of fullcircle), i/4d)
+                        * normalVectorToLightness(
+                            sphereAnglesToNormalVector(
+                                (angleRad(point offsetPathTime of fullcircle), arcsin(i/4d))
                             ), 0, point offsetPathTime of fullcircle scaled i
                         )
                     ), 0);
@@ -1668,9 +1714,9 @@ vardef pulleyWheel (expr d) =
                 thinBrushGenerate (fullcircle scaled i,
                     offsetPathTemplate (fullcircle scaled i, 0) (
                         1/4minStrokeWidth + minStrokeWidth
-                        * angleToLightness(
-                            sphereAngleToAbsoulteAngle(
-                                (angleRad(direction offsetPathTime of fullcircle) + pi, 1/2)
+                        * normalVectorToLightness(
+                            sphereAnglesToNormalVector(
+                                (angleRad(point offsetPathTime of fullcircle) + pi, arcsin(1/2))
                             ), 0, point offsetPathTime of fullcircle scaled i
                         )
                     ), 0);
@@ -1709,9 +1755,9 @@ vardef wheel (expr d, a) =
                 thinBrushGenerate (fullcircle scaled i,
                     offsetPathTemplate (fullcircle scaled i, 0) (
                         2/3minStrokeWidth + minStrokeWidth
-                        * angleToLightness(
-                            sphereAngleToAbsoulteAngle(
-                                (angleRad(direction offsetPathTime of fullcircle) + pi, i/4d)
+                        * normalVectorToLightness(
+                            sphereAnglesToNormalVector(
+                                (angleRad(point offsetPathTime of fullcircle) + pi, arcsin(i/4d))
                             ), 0, point offsetPathTime of fullcircle scaled i
                         )
                     ), 0);
@@ -1737,6 +1783,36 @@ vardef wheel (expr d, a) =
         draw pc1;
         draw pc2;
         draw pc3;
+    )
+enddef;
+
+%
+% This macro is for drawing shaded flat surfaces
+%
+
+vardef flatSurface (expr surfPath, normalVector, hatchAngle) =
+    save p, aHatch, hatchImage, surfLight, centerPoint, shadeRadius;
+    path p, aHatch;
+    picture hatchImage;
+    pair centerPoint;
+    numeric shadeRadius;
+    surfLight := normalVectorToLightness(normalVector, 0, (0, 0));
+    p := surfPath rotated -hatchAngle;
+    hatchImage := image(
+        centerPoint := 1/2[llcorner(surfPath), urcorner(surfPath)];
+        shadeRadius := 1/3abs(llcorner(surfPath)-urcorner(surfPath));
+        for i := xpart(ulcorner(p)) step 6minStrokeWidth until xpart(urcorner(p)):
+            aHatch := ((i, ypart(ulcorner(p))) -- (i, ypart(llcorner(p)))) rotated hatchAngle;
+            aHatch := pathSubdivide(aHatch,5);
+            draw brush(aHatch)(
+                (4*minStrokeWidth*surfLight)*
+                (1/5 + 4/5(abs((point offsetPathTime of aHatch) - centerPoint)/shadeRadius)**2)
+                );
+        endfor;
+    );
+    clip hatchImage to surfPath;
+    image(
+        draw hatchImage;
     )
 enddef;
 
@@ -1871,7 +1947,6 @@ vardef appendList@#(suffix listName)(expr valueToAdd, whereToAdd, omitDuplicates
     save v, valueExists;
     string v;
     boolean valueExists;
-    valueExists := false;
     if str @# = "":
         if not string listName:
             string listName;
@@ -1884,12 +1959,9 @@ vardef appendList@#(suffix listName)(expr valueToAdd, whereToAdd, omitDuplicates
     if unknown listName@#:
         listName@# := "";
     fi;
+    valueExists := false;
     if omitDuplicates:
-        for i=scantokens(listName@#):
-            if (i = valueToAdd):
-                valueExists := true;
-            fi;
-        endfor;
+        valueExists := isInList@#(valueToAdd, listName)
     fi;
     if not valueExists:
         if string valueToAdd:
@@ -1907,6 +1979,30 @@ vardef appendList@#(suffix listName)(expr valueToAdd, whereToAdd, omitDuplicates
             fi;
         fi;
     fi;
+enddef;
+
+vardef isInList@#(expr valueToLookFor)(suffix listName) =
+    save rv, i;
+    boolean rv;
+    rv := false;
+    if str @# = "":
+        if not string listName:
+            string listName;
+        fi;
+    else:
+        if not string listName0:
+            string listName[];
+        fi;
+    fi;
+    if unknown listName@#:
+        listName@# := "";
+    fi;
+    forsuffixes i=scantokens(listName):
+        if (str i = valueToLookFor):
+            rv := true;
+        fi;
+    endfor;
+    rv
 enddef;
 
 vardef sortList (expr listToSort, ascending) =
