@@ -1786,27 +1786,82 @@ vardef wheel (expr d, a) =
     )
 enddef;
 
+
+%
+% This one roughly finds the center of mass for a closed shape
+%
+
+vardef shapeCenterOfMass (expr p) =
+    save i, a, aTotal, q;
+    numeric i, a, aTotal;
+    pair rv, q[];
+    q0 := point 0 of p;
+    aTotal := 0;
+    rv := (0, 0);
+    for i := 1 step 1 until (length(p)-2):
+        q1 := point i of p;
+        q2 := point (i+1) of p;
+        if (xpart(q1-q0) = 0):
+            a := (abs(ypart(q1-q0)/cm)*abs(xpart(q2-q0)/cm))/2;
+        elseif (ypart(q1-q0) = 0):
+            a := (abs(xpart(q1-q0)/cm)*abs(ypart(q2-q0)/cm))/2;
+        elseif (abs(xpart(q1-q0)) > abs(ypart(q1-q0))):
+            begingroup
+                save qA;
+                pair qA;
+                qA = whatever[q0, q0 + (0,1)];
+                qA = whatever[q2, q2 + (q1-q0)];
+                a := (abs(ypart(qA-q0)/cm)*abs(xpart(q1-q0)/cm))/2;
+            endgroup
+        else:
+            begingroup
+                save qA;
+                pair qA;
+                qA = whatever[q0, q0 + (1,0)];
+                qA = whatever[q2, q2 + (q1-q0)];
+                a := (abs(xpart(qA-q0)/cm)*abs(ypart(q1-q0)/cm))/2;
+            endgroup
+        fi;
+        %a := 2;
+        aTotal := aTotal + a;
+        rv := rv + ((q0 + q1 + q2) scaled (a/3));
+    endfor;
+    if (aTotal > 0):
+        rv := rv scaled (1/aTotal);
+    else:
+        rv := (0, 0);
+    fi;
+    rv
+enddef;
+
 %
 % This macro is for drawing shaded flat surfaces
 %
 
 vardef flatSurface (expr surfPath, normalVector, hatchAngle) =
-    save p, aHatch, hatchImage, surfLight, centerPoint, shadeRadius;
+    save p, aHatch, hatchImage, surfLight, centerPoint, shadeRadius, totalHeight, centerPoint;
     path p, aHatch;
-    picture hatchImage;
     pair centerPoint;
+    picture hatchImage;
     numeric shadeRadius;
     surfLight := normalVectorToLightness(normalVector, 0, (0, 0));
     p := surfPath rotated -hatchAngle;
     hatchImage := image(
-        centerPoint := 1/2[llcorner(surfPath), urcorner(surfPath)];
-        shadeRadius := 1/3abs(llcorner(surfPath)-urcorner(surfPath));
-        for i := xpart(ulcorner(p)) step 6minStrokeWidth until xpart(urcorner(p)):
-            aHatch := ((i, ypart(ulcorner(p))) -- (i, ypart(llcorner(p)))) rotated hatchAngle;
+        totalHeight := abs(ypart(llcorner(p)) - ypart(urcorner(p)));
+        centerPoint := shapeCenterOfMass(surfPath);
+        shadeRadius := 0;
+        for i := 0 step 1 until length(surfPath):
+            if abs(centerPoint - (point i of surfPath)) > shadeRadius:
+                shadeRadius := abs(centerPoint - (point i of surfPath));
+            fi;
+        endfor;
+        centerPoint := centerPoint shifted ((redpart(lightDirectionVectorXYZ - normalVector), greenpart(lightDirectionVectorXYZ - normalVector)) scaled 1/2shadeRadius);
+        for i := ypart(llcorner(p)) step (totalHeight/round(totalHeight/shadingDensity)) until ypart(urcorner(p)):
+            aHatch := ((xpart(llcorner(p)),i) -- (xpart(lrcorner(p)), i)) rotated hatchAngle;
             aHatch := pathSubdivide(aHatch,5);
             draw brush(aHatch)(
-                (4*minStrokeWidth*surfLight)*
-                (1/5 + 4/5(abs((point offsetPathTime of aHatch) - centerPoint)/shadeRadius)**2)
+                (5*minStrokeWidth*surfLight)*
+                (1/6 + 5/6((abs((point offsetPathTime of aHatch) - centerPoint)/shadeRadius)**2))
                 );
         endfor;
     );
