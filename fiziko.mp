@@ -227,12 +227,17 @@ def defineMinStrokeWidth (expr msw) =
     % all the shading algorithms need to know how close lines should be packed
     shadingDensity := 3maxShadingStrokeWidth;
 
+    stippleSize := 3minStrokeWidth;
+    minStippleStep := 3/4stippleSize;
+    stippleShadingDensity := minStippleStep;
+
     % here are some pens
-    pen thinpen, thickpen, fatpen;
+    pen thinpen, thickpen, fatpen, stipplepen;
 
     thinpen := pencircle scaled minStrokeWidth;
     thickpen := pencircle scaled 3minStrokeWidth;
     fatpen := pencircle scaled 6minStrokeWidth;
+    stipplepen := pencircle scaled stippleSize;
 enddef;
 
 defineMinStrokeWidth(1/5pt);
@@ -453,9 +458,9 @@ enddef;
 % macro for thin lines which are actually dashed
 %
 
-def thinBrushGenerate (expr p, q, i) =
+vardef thinBrushGenerate@#(expr p, q, i) =
 begingroup
-    save w, bp, bt, t, h, linecap;
+    save w, bp, bt, t, h, minLength;
     numeric w[], t[];
     path bp[], bt;
     bt := q;
@@ -465,18 +470,38 @@ begingroup
     t := cutPathTime(bt, w2);
     bp1 := subpath (0, t) of p;
     bp2 := subpath (t, length(p)) of p;
+    if (str @# = "") or (str @# = "hatches"):
+        minLength := minDashStrokeLength;
+    elseif str @# = "stipples":
+        minLength := minStippleStep;
+    fi;
     if (((w0 - w1) > dashStrokeWidthStep) and (i < 15))
-        and ((arclength(bp1) > minDashStrokeLength)
-        or (arclength(bp2) > minDashStrokeLength)):
-        thinBrushGenerate (bp1, subpath (0, t) of q, i + 1);
-        thinBrushGenerate (bp2, subpath (t, length(q)) of q, i + 1);
+        and ((arclength(bp1) > minLength)
+        or (arclength(bp2) > minLength)):
+        thinBrushGenerate@#(bp1, subpath (0, t) of q, i + 1);
+        thinBrushGenerate@#(bp2, subpath (t, length(q)) of q, i + 1);
     else:
-        linecap := butt;
-        if (w2 > minStrokeWidth):
-            w2 := minStrokeWidth;
-        fi;
-        if (w2 >= minDashStrokeWidth) and (arclength(p) > 0):
-            draw p withpen thinpen dashed thinBrushPattern(w2, arclength(p));
+        if (str @# = "") or (str @# = "hatches"):
+            if (w2 > minStrokeWidth):
+                w2 := minStrokeWidth;
+            fi;
+            if (w2 >= minDashStrokeWidth) and (arclength(p) > 0):
+                draw p withpen thinpen dashed thinBrushPattern(w2, arclength(p));
+            fi;
+        elseif str @# = "stipples":
+            begingroup
+                interim linecap := rounded;
+                save stippleSizeVar;
+                stippleSizeVar := stippleSize;
+                save stippleSize;
+                stippleSize := stippleSizeVar * (1 + uniformdeviate(0.2));
+                if (w2 > minStrokeWidth):
+                    w2 := minStrokeWidth;
+                fi;
+                if (w2 >= minDashStrokeWidth) and (arclength(p) > 0):
+                    draw p withpen (pencircle scaled stippleSize) dashed stipplesBrushPattern(w2, arclength(p));
+                fi;
+            endgroup
         fi;
     fi;
 endgroup
@@ -530,6 +555,50 @@ vardef thinBrushPattern (expr w, l) =
     fi
 enddef;
 
+
+%
+% Stipples are also dashes
+%
+
+vardef stipplesBrushPattern (expr w, l) =
+    save d, n, rn, rv;
+    numeric d[];
+    picture rv;
+    if w > stippleSize:
+        d0 := minStippleStep;
+    else:
+        n := (w*l)/(stippleSize*minStippleStep);
+        rn := floor(n);
+        if rn > 0:
+            d0 := (l/rn);
+        fi;
+    fi;
+    if rn > 0:
+        d1 := uniformdeviate(d0);
+        d2 := d0-d1;
+        d3 := uniformdeviate(d0);
+        d4 := d0-d3;
+        d5 := uniformdeviate(d0);
+        d6 := d0-d5;
+        if rn >=3:
+            if uniformdeviate(2) > 1:
+                rv := dashpattern (off d1 on 0 off (d2+d5) on 0 off (d4+d6) on 0 off d3);
+            else:
+                rv := dashpattern (off d1 on 0 off (d2+d3) on 0 off d4);
+            fi;
+        else:
+            rv := dashpattern (off d1 on 0 off d2);
+        fi;
+    else:
+        if uniformdeviate(1) <= n:
+            rv := dashpattern (off uniformdeviate(l) on 0 off l);
+        else:
+            rv := dashpattern (off 2l on 0 off 2l);
+        fi;
+    fi;
+    rv
+enddef;
+
 %
 % macro that actually draws line of variable width
 %
@@ -541,25 +610,39 @@ vardef brush (expr p) (text offsetFunction) =
 enddef;
 
 %
+% same, but only for thin brushes
+%
+
+vardef thinBrush@#(expr p) (text offsetFunction) =
+    image(
+        thinBrushGenerate@#(p, offsetPathTemplate(p, 0)(offsetFunction), 0);
+    )
+enddef;
+
+%
 % This macro generates tube between paths p and q, of variable width d
 % Tube is subdivided into segments in such a way that within every segment
 % we need 2**n lines to generate even fill
 %
 
-def tubeGenerate (expr p, q, d, i) =
-begingroup
-    save w, bw, k, t, tubeWidth, sp, currentPath, currentTubePath, currentDepth;
+vardef tubeGenerate@#(expr p, q, d, i) =
+    save w, bw, k, t, tubeWidth, sp, currentPath, currentTubePath, currentDepth, lineDensity;
     numeric w[], bw[], t, currentDepth;
     path tubeWidth, sp, currentPath, currentTubePath;
     tubeWidth := d yscaled 2;
+    if (str @# = "") or (str @# = "hatches"):
+        lineDensity := shadingDensity;
+    elseif (str @# = "stipples"):
+        lineDensity := stippleShadingDensity;
+    fi;
     w0 := (ypart(urcorner(tubeWidth))) - 1/1000;
     w1 := (ypart(lrcorner(tubeWidth))) + 1/1000;
-    w2 := ceiling(log(w0/shadingDensity, 2));
-    w3 := ceiling(log(w1/shadingDensity, 2));
+    w2 := ceiling(log(w0/lineDensity, 2));
+    w3 := ceiling(log(w1/lineDensity, 2));
     if ((w2 > w3) and (i<20)):
-        t := cutPathTime(tubeWidth, shadingDensity*(2**(w2-1)));
-        tubeGenerate (subpath (0, t) of p, subpath (0, t) of q, subpath (0, t) of d, i + 1);
-        tubeGenerate (subpath (t, length(p)) of p, subpath (t, length(q)) of q, subpath (t, length(d)) of d, i + 1);
+        t := cutPathTime(tubeWidth, lineDensity*(2**(w2-1)));
+        tubeGenerate@#(subpath (0, t) of p, subpath (0, t) of q, subpath (0, t) of d, i + 1);
+        tubeGenerate@#(subpath (t, length(p)) of p, subpath (t, length(q)) of q, subpath (t, length(d)) of d, i + 1);
     else:
         if (arclength(p) > 0) and (arclength(q) > 0):
             bw1 := 2**w2;
@@ -571,22 +654,34 @@ begingroup
                 if shadowsEnabled:
                     currentPath := shadowCut(currentPath, currentDepth);
                 fi;
-                brushGenerate (currentPath,
-                offsetPathTemplate(currentPath, 0)(
-                maxShadingStrokeWidth
-                if odd (k): * (abs(ypart(point offsetPathTime of tubeWidth)/bw1) - 1/2shadingDensity) fi
-                %* orderFade(xpart(unitvector(direction offsetPathTime of tubeWidth yscaled 1/2cos(angleOnTube))), k) % why was it even here?
-                * normalVectorToLightness(
-                    tubeAnglesToNormalVector((
-                        angleOnTube,
-                        angleRad(direction offsetPathTime of currentTubePath),
-                        angleRad(direction offsetPathTime of (tubeWidth yscaled 1/2))
-                        )), currentDepth, point offsetPathTime of currentPath)
-                ), 0);
+                if (str @# = "") or (str @# = "hatches"):
+                    brushGenerate (currentPath,
+                    offsetPathTemplate(currentPath, 0)(
+                    maxShadingStrokeWidth
+                    if odd (k): * (abs(ypart(point offsetPathTime of tubeWidth)/bw1) - 1/2lineDensity) fi
+                    * normalVectorToLightness(
+                        tubeAnglesToNormalVector((
+                            angleOnTube,
+                            angleRad(direction offsetPathTime of currentTubePath),
+                            angleRad(direction offsetPathTime of (tubeWidth yscaled 1/2))
+                            )), currentDepth, point offsetPathTime of currentPath)
+                    ), 0);
+                elseif (str @# = "stipples"):
+                    thinBrushGenerate.@#(currentPath,
+                    offsetPathTemplate(currentPath, 0)(
+                    stippleSize
+                    if odd (k): * (abs(ypart(point offsetPathTime of tubeWidth)/bw1) - 1/2lineDensity) fi
+                    * normalVectorToLightness(
+                        tubeAnglesToNormalVector((
+                            angleOnTube,
+                            angleRad(direction offsetPathTime of currentTubePath),
+                            angleRad(direction offsetPathTime of (tubeWidth yscaled 1/2))
+                            )), currentDepth, point offsetPathTime of currentPath)
+                    ), 0);
+                fi;
             endfor;
         fi;
     fi;
-endgroup
 enddef;
 
 %
@@ -671,15 +766,15 @@ vardef tubeAnglesToNormalVector (expr p) =
 enddef;
 
 %
-% frontends to simplify tube drawing. tubeOutline variable changes on every call
-% of any tube frontend function and can be used afterwards.
+% frontend to simplify tube drawing. tubeOutline variable changes on every call
+% of the function and can be used afterwards.
 %
 
 path tubeOutline;
 boolean drawTubeEnds;
 drawTubeEnds := true;
 
-vardef tube.l (expr p)(text offsetFunction)=
+vardef tube@#(expr p)(text offsetFunction)=
     save q;
     path q[];
     q0 := offsetPathSubdivide(p);
@@ -687,52 +782,31 @@ vardef tube.l (expr p)(text offsetFunction)=
     q2 := offsetPathGenerate (q0, q1, 0);
     q3 := offsetPathGenerate (q0, q1 yscaled -1, 0);
     tubeOutline := q3--reverse(q2)--cycle;
-    image(
-        tubeGenerate (q2, q3, q1, 0);
-        if (cycle p) or (not drawTubeEnds):
-            draw q2 withpen thinpen;
-            draw q3 withpen thinpen;
+    if str @# = "e":
+        if not drawTubeEnds:
+            image(
+                draw q2 withpen thinpen;
+                draw q3 withpen thinpen;
+                )
         else:
-            draw q2--reverse(q3)--cycle withpen thinpen;
-        fi;
-    )
-enddef;
-
-vardef tube.t (expr p)(text offsetFunction)=
-    save q;
-    path q[];
-    q0 := offsetPathSubdivide(p);
-    q1 := offsetPathTemplate(q0, 0)(offsetFunction);
-    q2 := offsetPathGenerate (q0, q1, 0);
-    q3 := offsetPathGenerate (q0, q1 yscaled -1, 0);
-    tubeOutline := q3--reverse(q2)--cycle;
-    image(
-        tubeGenerateAlt (q2, q3, q1);
-        if (cycle p) or (not drawTubeEnds):
-            draw q2 withpen thinpen;
-            draw q3 withpen thinpen;
-        else:
-            draw q2--reverse(q3)--cycle withpen thinpen;
-        fi;
-    )
-enddef;
-
-vardef tube.e (expr p)(text offsetFunction)=
-    save q;
-    path q[];
-    q0 := offsetPathSubdivide(p);
-    q1 := offsetPathTemplate(q0, 0)(offsetFunction);
-    q2 := offsetPathGenerate (q0, q1, 0);
-    q3 := offsetPathGenerate (q0, q1 yscaled -1, 0);
-    tubeOutline := q3--reverse(q2)--cycle;
-    if not drawTubeEnds:
-        image(
-            draw q2 withpen thinpen;
-            draw q3 withpen thinpen;
-            )
+            tubeOutline
+        fi
     else:
-        tubeOutline := q3--reverse(q2)--cycle;
-        tubeOutline
+        image(
+            if str @# = "l":
+                tubeGenerate (q2, q3, q1, 0);
+            elseif str @# = "s":
+                tubeGenerate.stipples(q2, q3, q1, 0);
+            elseif str @# = "t":
+                tubeGenerateAlt (q2, q3, q1);
+            fi;
+            if (cycle p) or (not drawTubeEnds):
+                draw q2 withpen thinpen;
+                draw q3 withpen thinpen;
+            else:
+                draw q2--reverse(q3)--cycle withpen thinpen;
+            fi;
+        )
     fi
 enddef;
 
@@ -1838,14 +1912,19 @@ enddef;
 % This macro is for drawing shaded flat surfaces
 %
 
-vardef flatSurface (expr surfPath, normalVector, hatchAngle) =
-    save p, aHatch, hatchImage, surfLight, centerPoint, shadeRadius, totalHeight, centerPoint;
+vardef flatSurface@#(expr surfPath, normalVector, hatchAngle) =
+    save p, aHatch, hatchImage, surfLight, centerPoint, shadeRadius, totalHeight, centerPoint, lineDensity;
     path p, aHatch;
     pair centerPoint;
     picture hatchImage;
     numeric shadeRadius;
     surfLight := normalVectorToLightness(normalVector, 0, (0, 0));
     p := surfPath rotated -hatchAngle;
+    if (str @# = "") or (str @# = "hatches"):
+        lineDensity := shadingDensity;
+    elseif (str @# = "stipples"):
+        lineDensity := stippleShadingDensity;
+    fi;
     hatchImage := image(
         totalHeight := abs(ypart(llcorner(p)) - ypart(urcorner(p)));
         centerPoint := shapeCenterOfMass(surfPath);
@@ -1855,14 +1934,22 @@ vardef flatSurface (expr surfPath, normalVector, hatchAngle) =
                 shadeRadius := abs(centerPoint - (point i of surfPath));
             fi;
         endfor;
-        centerPoint := centerPoint shifted ((redpart(lightDirectionVectorXYZ - normalVector), greenpart(lightDirectionVectorXYZ - normalVector)) scaled 1/2shadeRadius);
-        for i := ypart(llcorner(p)) step (totalHeight/round(totalHeight/shadingDensity)) until ypart(urcorner(p)):
+        centerPoint := centerPoint shifted ((redpart(lightDirectionVectorXYZ - normalVector), greenpart(lightDirectionVectorXYZ - normalVector)) scaled 1/3shadeRadius);
+        %fill surfPath withcolor (surfLight, surfLight, surfLight);
+        for i := ypart(llcorner(p)) step (totalHeight/round(totalHeight/lineDensity)) until ypart(urcorner(p)):
             aHatch := ((xpart(llcorner(p)),i) -- (xpart(lrcorner(p)), i)) rotated hatchAngle;
             aHatch := pathSubdivide(aHatch,5);
-            draw brush(aHatch)(
-                (5*minStrokeWidth*surfLight)*
-                (1/6 + 5/6((abs((point offsetPathTime of aHatch) - centerPoint)/shadeRadius)**2))
-                );
+            if (str @# = "") or (str @# = "hatches"):
+                draw brush(aHatch)(
+                    (5*minStrokeWidth*surfLight)*
+                    (1/6 + 5/6((abs((point offsetPathTime of aHatch) - centerPoint)/shadeRadius)**2))
+                    );
+            elseif (str @# = "stipples"):
+                draw thinBrush.stipples(aHatch)(
+                    (5*minStrokeWidth*surfLight)*
+                    (1/6 + 5/6((abs((point offsetPathTime of aHatch) - centerPoint)/shadeRadius)**2))
+                    );
+            fi;
         endfor;
     );
     clip hatchImage to surfPath;
@@ -2052,11 +2139,19 @@ vardef isInList@#(expr valueToLookFor)(suffix listName) =
     if unknown listName@#:
         listName@# := "";
     fi;
-    forsuffixes i=scantokens(listName):
-        if (str i = valueToLookFor):
-            rv := true;
-        fi;
-    endfor;
+    if string valueToLookFor:
+        forsuffixes i=scantokens(listName@#):
+            if (str i = valueToLookFor):
+                rv := true;
+            fi;
+        endfor;
+    else:
+        for i=scantokens(listName@#):
+            if (i = valueToLookFor):
+                rv := true;
+            fi;
+        endfor;
+    fi;
     rv
 enddef;
 
