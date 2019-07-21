@@ -228,7 +228,7 @@ def defineMinStrokeWidth (expr msw) =
     shadingDensity := 3maxShadingStrokeWidth;
 
     stippleSize := 3minStrokeWidth;
-    minStippleStep := 3/4stippleSize;
+    minStippleStep := 1/2stippleSize;
     stippleShadingDensity := minStippleStep;
 
     % here are some pens
@@ -460,9 +460,10 @@ enddef;
 
 vardef thinBrushGenerate@#(expr p, q, i) =
 begingroup
-    save w, bp, bt, t, h, minLength;
+    save w, bp, bt, t, h, minLength, dashPatternImage;
     numeric w[], t[];
     path bp[], bt;
+    picture dashPatternImage;
     bt := q;
     w0 := (ypart(urcorner(bt)));
     w1 := (ypart(lrcorner(bt)));
@@ -499,7 +500,10 @@ begingroup
                     w2 := minStrokeWidth;
                 fi;
                 if (w2 >= minDashStrokeWidth) and (arclength(p) > 0):
-                    draw p withpen (pencircle scaled stippleSize) dashed stipplesBrushPattern(w2, arclength(p));
+                    dashPatternImage := stipplesBrushPattern(w2, arclength(p));
+                    if urcorner(dashPatternImage) <> (0,0):
+                        draw p withpen (pencircle scaled stippleSize) dashed dashPatternImage;
+                    fi;
                 fi;
             endgroup
         fi;
@@ -561,7 +565,8 @@ enddef;
 %
 
 vardef stipplesBrushPattern (expr w, l) =
-    save d, n, rn, rv;
+    save d, n, rn, rv, ss;
+    ss := 1/1000;
     numeric d[];
     picture rv;
     if w > stippleSize:
@@ -570,7 +575,7 @@ vardef stipplesBrushPattern (expr w, l) =
         n := (w*l)/(stippleSize*minStippleStep);
         rn := floor(n);
         if rn > 0:
-            d0 := (l/rn);
+            d0 := l/rn;
         fi;
     fi;
     if rn > 0:
@@ -582,18 +587,18 @@ vardef stipplesBrushPattern (expr w, l) =
         d6 := d0-d5;
         if rn >=3:
             if uniformdeviate(2) > 1:
-                rv := dashpattern (off d1 on 0 off (d2+d5) on 0 off (d4+d6) on 0 off d3);
+                rv := dashpattern (off d1 on ss off (d2+d5)-ss on ss off (d4+d6)-ss on ss off d3-ss);
             else:
-                rv := dashpattern (off d1 on 0 off (d2+d3) on 0 off d4);
+                rv := dashpattern (off d1 on ss off (d2+d3)-ss on ss off d4-ss);
             fi;
         else:
-            rv := dashpattern (off d1 on 0 off d2);
+            rv := dashpattern (off d1 on ss off d2-ss);
         fi;
     else:
         if uniformdeviate(1) <= n:
-            rv := dashpattern (off uniformdeviate(l) on 0 off l);
+            rv := dashpattern (off uniformdeviate(l-ss) on ss off l);
         else:
-            rv := dashpattern (off 2l on 0 off 2l);
+            rv := image();
         fi;
     fi;
     rv
