@@ -1,4 +1,4 @@
-%    fiziko 0.1.4
+%    fiziko 0.2.0
 %    MetaPost library for physics textbook illustrations
 %    Copyright 2019 Sergey Slyusarev
 %
@@ -227,9 +227,9 @@ def defineMinStrokeWidth (expr msw) =
     % all the shading algorithms need to know how close lines should be packed
     shadingDensity := 3maxShadingStrokeWidth;
 
-    stippleSize := 3minStrokeWidth;
-    minStippleStep := 1/2stippleSize;
-    stippleShadingDensity := minStippleStep;
+    stippleSize := 5/2minStrokeWidth;
+    minStippleStep := 3/4stippleSize;
+    stippleShadingDensity := 3minStippleStep;
 
     % here are some pens
     pen thinpen, thickpen, fatpen, stipplepen;
@@ -495,11 +495,23 @@ begingroup
                 save stippleSizeVar;
                 stippleSizeVar := stippleSize;
                 save stippleSize;
-                stippleSize := stippleSizeVar * (1 + uniformdeviate(0.2));
                 if (w2 > minStrokeWidth):
                     w2 := minStrokeWidth;
                 fi;
                 if (w2 >= minDashStrokeWidth) and (arclength(p) > 0):
+                    stippleSize := stippleSizeVar * (0.9 + uniformdeviate(0.3));
+                    dashPatternImage := stipplesBrushPattern(w2, arclength(p));
+                    if urcorner(dashPatternImage) <> (0,0):
+                        bp1 := offsetPathGenerate (p, (q yscaled 0) shifted (0, 1/3stippleShadingDensity), 0);
+                        draw bp1 withpen (pencircle scaled stippleSize) dashed dashPatternImage;
+                    fi;
+                    stippleSize := stippleSizeVar * (0.9 + uniformdeviate(0.3));
+                    dashPatternImage := stipplesBrushPattern(w2, arclength(p));
+                    if urcorner(dashPatternImage) <> (0,0):
+                        bp2 := offsetPathGenerate (p, (q yscaled 0) shifted (0, -1/3stippleShadingDensity), 0);
+                        draw bp2 withpen (pencircle scaled stippleSize) dashed dashPatternImage;
+                    fi;
+                    stippleSize := stippleSizeVar * (0.9 + uniformdeviate(0.3));
                     dashPatternImage := stipplesBrushPattern(w2, arclength(p));
                     if urcorner(dashPatternImage) <> (0,0):
                         draw p withpen (pencircle scaled stippleSize) dashed dashPatternImage;
@@ -569,23 +581,23 @@ vardef stipplesBrushPattern (expr w, l) =
     ss := 1/1000;
     numeric d[];
     picture rv;
-    if w > stippleSize:
-        d0 := minStippleStep;
-    else:
-        n := (w*l)/(stippleSize*minStippleStep);
+    %if w > stippleSize:
+    %    d0 := minStippleStep;
+    %else:
+        n := (w*l)/(stippleSize**2);
         rn := floor(n);
         if rn > 0:
             d0 := l/rn;
         fi;
-    fi;
+    %fi;
     if rn > 0:
         d1 := uniformdeviate(d0);
         d2 := d0-d1;
-        d3 := uniformdeviate(d0);
-        d4 := d0-d3;
-        d5 := uniformdeviate(d0);
-        d6 := d0-d5;
         if rn >=3:
+            d3 := uniformdeviate(d0);
+            d4 := d0-d3;
+            d5 := uniformdeviate(d0);
+            d6 := d0-d5;
             if uniformdeviate(2) > 1:
                 rv := dashpattern (off d1 on ss off (d2+d5)-ss on ss off (d4+d6)-ss on ss off d3-ss);
             else:
@@ -595,7 +607,7 @@ vardef stipplesBrushPattern (expr w, l) =
             rv := dashpattern (off d1 on ss off d2-ss);
         fi;
     else:
-        if uniformdeviate(1) <= n:
+        if uniformdeviate(1) < n:
             rv := dashpattern (off uniformdeviate(l-ss) on ss off l);
         else:
             rv := image();
@@ -780,8 +792,9 @@ boolean drawTubeEnds;
 drawTubeEnds := true;
 
 vardef tube@#(expr p)(text offsetFunction)=
-    save q;
+    save q, respic;
     path q[];
+    picture respic;
     q0 := offsetPathSubdivide(p);
     q1 := offsetPathTemplate(q0, 0)(offsetFunction);
     q2 := offsetPathGenerate (q0, q1, 0);
@@ -799,11 +812,11 @@ vardef tube@#(expr p)(text offsetFunction)=
     else:
         image(
             if str @# = "l":
-                tubeGenerate (q2, q3, q1, 0);
+                respic := image(tubeGenerate (q2, q3, q1, 0););
             elseif str @# = "s":
-                tubeGenerate.stipples(q2, q3, q1, 0);
+                respic := image(tubeGenerate.stipples(q2, q3, q1, 0);)
             elseif str @# = "t":
-                tubeGenerateAlt (q2, q3, q1);
+                respic := image(tubeGenerateAlt (q2, q3, q1););
             fi;
             if (cycle p) or (not drawTubeEnds):
                 draw q2 withpen thinpen;
@@ -811,6 +824,8 @@ vardef tube@#(expr p)(text offsetFunction)=
             else:
                 draw q2--reverse(q3)--cycle withpen thinpen;
             fi;
+            clip respic to (q2--reverse(q3)--cycle);
+            draw respic;
         )
     fi
 enddef;
@@ -819,36 +834,58 @@ enddef;
 % Sphere can be used as a cap for a tube, so it has same 2**n lines.
 %
 
-vardef sphere.c (expr d) =
-    save currentCircle, origCircle, currentRadius, currentDepth, order, circleThickness;
+vardef sphere@#(expr d) =
+    save currentCircle, origCircle, currentRadius, currentDepth, order, circleThickness, lineDensity, shadingPicture;
     path currentCircle, origCircle;
     numeric currentRadius, currentDepth, order;
+    picture shadingPicture;
+    if (str @# = "") or (str @# = "c"):
+        lineDensity := shadingDensity;
+    elseif (str @# = "s"):
+        lineDensity := stippleShadingDensity;
+    fi;
     origCircle := fullcircle;
-    order := 2**ceiling(log((1/2d)/shadingDensity, 2));
+    order := 2**ceiling(log((1/2d)/lineDensity, 2));
     image(
         draw fullcircle scaled d withpen thinpen;
-        for i := 1 upto order:
-        currentRadius := i/order;
-        currentCircle := origCircle scaled (currentRadius*d) rotated uniformdeviate (1/4pi);
-        if odd(i):
-            circleThickness := maxShadingStrokeWidth * ((abs(d - (shadingDensity*order)))/order);
-        else:
-            circleThickness := maxShadingStrokeWidth;
-        fi;
-        currentDepth:= -(1-sqrt(1-currentRadius**2))*(1/2d);
-        if shadowsEnabled:
-            currentCircle := shadowCut(currentCircle, currentDepth);
-        fi;
-        brushGenerate (currentCircle,
-            offsetPathTemplate (currentCircle, 0) (
-                circleThickness
-                * normalVectorToLightness(
-                    sphereAnglesToNormalVector(
-                        (angleRad(point offsetPathTime of currentCircle), arcsin(currentRadius))
-                    ), currentDepth, point offsetPathTime of currentCircle
-                )
-            ), 0);
-        endfor;
+        shadingPicture := image(
+            for i := 1 upto order:
+                currentRadius := i/order;
+                currentCircle := origCircle scaled (currentRadius*d) rotated uniformdeviate (1/4pi);
+                if odd(i):
+                    circleThickness := maxShadingStrokeWidth * ((abs(d - (lineDensity*order)))/order);
+                else:
+                    circleThickness := maxShadingStrokeWidth;
+                fi;
+                currentDepth:= -(1-sqrt(1-currentRadius**2))*(1/2d);
+                if shadowsEnabled:
+                    currentCircle := shadowCut(currentCircle, currentDepth);
+                fi;
+                if (str @# = "") or (str @# = "c"):
+                    brushGenerate (currentCircle,
+                        offsetPathTemplate (currentCircle, 0) (
+                            circleThickness
+                            * normalVectorToLightness(
+                                sphereAnglesToNormalVector(
+                                    (angleRad(point offsetPathTime of currentCircle), arcsin(currentRadius))
+                                ), currentDepth, point offsetPathTime of currentCircle
+                            )
+                        ), 0);
+                elseif (str @# = "s"):
+                    thinBrushGenerate.stipples(currentCircle,
+                        offsetPathTemplate (currentCircle, 0) (
+                            circleThickness
+                            * normalVectorToLightness(
+                                sphereAnglesToNormalVector(
+                                    (angleRad(point offsetPathTime of currentCircle), arcsin(currentRadius))
+                                ), currentDepth, point offsetPathTime of currentCircle
+                            )
+                        ), 0);
+                fi;
+            endfor;
+        );
+        clip shadingPicture to (fullcircle scaled d);
+        draw shadingPicture;
     )
 enddef;
 
@@ -859,7 +896,7 @@ enddef;
 % so all we need to do is to fade lines correspondingly
 %
 
-vardef sphere.l (expr d, lat) =
+vardef sphereLat (expr d, lat) =
     save p, a, x, y, sphlat, latrad, n, c, currentPath, nline, tlat;
     path p[], currentPath, currentArc;
     sphlat := 0;
@@ -1393,7 +1430,7 @@ vardef globe (expr s, lon, lat) =
         vardef lightnessPP (expr v) =
             1/2v
         enddef;
-        p1 := image(draw sphere.l(2s, lat));
+        p1 := image(draw sphereLat(2s, lat));
         vardef lightnessPP (expr v) =
             if (abs(cos(sphlat)) > 7/8 + uniformdeviate (1/20)):
                 1/4v
@@ -1401,7 +1438,7 @@ vardef globe (expr s, lon, lat) =
                 1/3v + 2/3
             fi
         enddef;
-        p2 := image(draw sphere.l(2s, lat));
+        p2 := image(draw sphereLat(2s, lat));
     endgroup;
     image(
         draw fullcircle scaled 2s withpen thinpen;
