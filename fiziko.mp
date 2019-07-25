@@ -214,7 +214,7 @@ def defineMinStrokeWidth (expr msw) =
     % We don't want to display strokes that are too thin to print. Default value
     % is subject to change when needed.
     minStrokeWidth := msw;
-    maxShadingStrokeWidth := 2minStrokeWidth;
+    maxShadingStrokeWidth := 3/2minStrokeWidth;
 
     % At some point it's useless to display even dashes
     minDashStrokeWidth := 1/3minStrokeWidth;
@@ -227,9 +227,10 @@ def defineMinStrokeWidth (expr msw) =
     % all the shading algorithms need to know how close lines should be packed
     shadingDensity := 3maxShadingStrokeWidth;
 
-    stippleSize := 5/2minStrokeWidth;
-    minStippleStep := 3/4stippleSize;
+    stippleSize := 3/2minStrokeWidth;
+    minStippleStep := 1/2stippleSize;
     stippleShadingDensity := 3minStippleStep;
+    minStippleStrokeWidth := 1/20stippleSize;
 
     % here are some pens
     pen thinpen, thickpen, fatpen, stipplepen;
@@ -460,7 +461,7 @@ enddef;
 
 vardef thinBrushGenerate@#(expr p, q, i) =
 begingroup
-    save w, bp, bt, t, h, minLength, dashPatternImage;
+    save w, bp, bt, t, h, minLength, minWidth, dashPatternImage;
     numeric w[], t[];
     path bp[], bt;
     picture dashPatternImage;
@@ -473,8 +474,10 @@ begingroup
     bp2 := subpath (t, length(p)) of p;
     if (str @# = "") or (str @# = "hatches"):
         minLength := minDashStrokeLength;
+        minWidth := minDashStrokeWidth;
     elseif str @# = "stipples":
         minLength := minStippleStep;
+        minWidth := minStippleStrokeWidth;
     fi;
     if (((w0 - w1) > dashStrokeWidthStep) and (i < 15))
         and ((arclength(bp1) > minLength)
@@ -486,7 +489,7 @@ begingroup
             if (w2 > minStrokeWidth):
                 w2 := minStrokeWidth;
             fi;
-            if (w2 >= minDashStrokeWidth) and (arclength(p) > 0):
+            if (w2 >= minWidth) and (arclength(p) > 0):
                 draw p withpen thinpen dashed thinBrushPattern(w2, arclength(p));
             fi;
         elseif str @# = "stipples":
@@ -495,10 +498,8 @@ begingroup
                 save stippleSizeVar;
                 stippleSizeVar := stippleSize;
                 save stippleSize;
-                if (w2 > minStrokeWidth):
-                    w2 := minStrokeWidth;
-                fi;
-                if (w2 >= minDashStrokeWidth) and (arclength(p) > 0):
+                w2 := 1/3w2;
+                if (w2 >= minWidth) and (arclength(p) > 0):
                     stippleSize := stippleSizeVar * (0.9 + uniformdeviate(0.3));
                     dashPatternImage := stipplesBrushPattern(w2, arclength(p));
                     if urcorner(dashPatternImage) <> (0,0):
@@ -596,13 +597,13 @@ vardef stipplesBrushPattern (expr w, l) =
         if rn >=3:
             d3 := uniformdeviate(d0);
             d4 := d0-d3;
-            d5 := uniformdeviate(d0);
-            d6 := d0-d5;
-            if uniformdeviate(2) > 1:
-                rv := dashpattern (off d1 on ss off (d2+d5)-ss on ss off (d4+d6)-ss on ss off d3-ss);
-            else:
+            %if uniformdeviate(2) > 1:
+            %    d5 := uniformdeviate(d0);
+            %    d6 := d0-d5;
+            %    rv := dashpattern (off d1 on ss off (d2+d5)-ss on ss off (d4+d6)-ss on ss off d3-ss);
+            %else:
                 rv := dashpattern (off d1 on ss off (d2+d3)-ss on ss off d4-ss);
-            fi;
+            %fi;
         else:
             rv := dashpattern (off d1 on ss off d2-ss);
         fi;
@@ -1955,11 +1956,10 @@ enddef;
 %
 
 vardef flatSurface@#(expr surfPath, normalVector, hatchAngle) =
-    save p, aHatch, hatchImage, surfLight, centerPoint, shadeRadius, totalHeight, centerPoint, lineDensity;
+    save p, aHatch, hatchImage, surfLight, totalHeight, totalWidth, lineDensity, distFromEdge, hatchLength;
     path p, aHatch;
-    pair centerPoint;
     picture hatchImage;
-    numeric shadeRadius;
+    numeric distFromEdge, hatchLength;
     surfLight := normalVectorToLightness(normalVector, 0, (0, 0));
     p := surfPath rotated -hatchAngle;
     if (str @# = "") or (str @# = "hatches"):
@@ -1969,28 +1969,34 @@ vardef flatSurface@#(expr surfPath, normalVector, hatchAngle) =
     fi;
     hatchImage := image(
         totalHeight := abs(ypart(llcorner(p)) - ypart(urcorner(p)));
-        centerPoint := shapeCenterOfMass(surfPath);
-        shadeRadius := 0;
-        for i := 0 step 1 until length(surfPath):
-            if abs(centerPoint - (point i of surfPath)) > shadeRadius:
-                shadeRadius := abs(centerPoint - (point i of surfPath));
-            fi;
-        endfor;
-        centerPoint := centerPoint shifted ((redpart(lightDirectionVectorXYZ - normalVector), greenpart(lightDirectionVectorXYZ - normalVector)) scaled 1/3shadeRadius);
+        totalWidth := abs(xpart(llcorner(p)) - xpart(urcorner(p)));
         %fill surfPath withcolor (surfLight, surfLight, surfLight);
         for i := ypart(llcorner(p)) step (totalHeight/round(totalHeight/lineDensity)) until ypart(urcorner(p)):
-            aHatch := ((xpart(llcorner(p)),i) -- (xpart(lrcorner(p)), i)) rotated hatchAngle;
-            aHatch := pathSubdivide(aHatch,5);
-            if (str @# = "") or (str @# = "hatches"):
-                draw brush(aHatch)(
-                    (5*minStrokeWidth*surfLight)*
-                    (1/6 + 5/6((abs((point offsetPathTime of aHatch) - centerPoint)/shadeRadius)**2))
-                    );
-            elseif (str @# = "stipples"):
-                draw thinBrush.stipples(aHatch)(
-                    (5*minStrokeWidth*surfLight)*
-                    (1/6 + 5/6((abs((point offsetPathTime of aHatch) - centerPoint)/shadeRadius)**2))
-                    );
+            distFromEdge := abs((i - ypart(llcorner(p)))/(ypart(urcorner(p))-ypart(llcorner(p))));
+            aHatch := (xpart(llcorner(p)),i) -- (xpart(lrcorner(p)), i);
+            aHatch := (point xpart(aHatch firstIntersectionTimes p) of aHatch) --
+                (point xpart(reverse(aHatch) firstIntersectionTimes p) of reverse(aHatch));
+            hatchLength := arclength(aHatch);
+            if arclength(aHatch) > 0:
+                aHatch := aHatch rotated hatchAngle;
+                aHatch := pathSubdivide(aHatch,3+round(uniformdeviate(2)));
+                if (str @# = "") or (str @# = "hatches"):
+                    draw brush(aHatch)(
+                        (2minStrokeWidth*(1/15+surfLight))*
+                        (1-6/7sqrt(
+                                sin(offsetPathLength*pi)*(hatchLength/totalWidth)*
+                                sin(distFromEdge*pi)
+                                ))
+                        );
+                elseif (str @# = "stipples"):
+                    draw thinBrush.stipples(aHatch)(
+                        (stippleSize*(1/15+surfLight))*
+                        (1-5/6sqrt(
+                                sin(offsetPathLength*pi)*(hatchLength/totalWidth)*
+                                sin(distFromEdge*pi)
+                                ))
+                        );
+                fi;
             fi;
         endfor;
     );
