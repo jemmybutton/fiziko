@@ -113,6 +113,21 @@ This macro returns a \texttt{picture} of a sphere with specified diameter shaded
     endfor;
 \end{mplibcode}
 
+\subsection{sphere.s (\emph{diameter})}
+This macro returns a \texttt{picture} of a sphere with specified diameter shaded with stipples.
+
+\begin{lstlisting}
+    for i := 1 step 1 until 6:
+        draw sphere.s(i*1/4cm) shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+\end{lstlisting}
+
+\begin{mplibcode}
+    for i := 1 step 1 until 6:
+        draw sphere.s(i*1/4cm) shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+\end{mplibcode}
+
 \subsection{sphereLat (\emph{diameter, angle})}
 This macro returns a \texttt{picture} of a shaded sphere with specified diameter. Unlike \texttt{sphere.c} macro, this one draws latitudinal strokes around axis rotated at specified \texttt{angle}.
 
@@ -158,6 +173,21 @@ This macro returns a \texttt{picture} of a shaded ``tube'' of variable width alo
     path p;
     p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
     draw tube.t (p)(1/2cm*sin(offsetPathLength*pi));
+\end{mplibcode}
+
+\subsection{tube.s (\emph{path})(\emph{offset function})}
+This macro returns a \texttt{picture} of a shaded ``tube'' of variable width along given path, which is  controlled by some arbitrary function, analogous to \texttt{offsetPath}. ``Tube'' drawn by this macro is shaded with stipples. Once tube is generated, you can call \texttt{tubeOutline} path global variable, if you need one.
+
+\begin{lstlisting}
+    path p;
+    p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
+    draw tube.s (p)(1/2cm*sin(offsetPathLength*pi));
+\end{lstlisting}
+
+\begin{mplibcode}
+    path p;
+    p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
+    draw tube.s (p)(1/2cm*sin(offsetPathLength*pi));
 \end{mplibcode}
 
 \subsection{tube.e (\emph{path})(\emph{offset function})}
@@ -401,9 +431,9 @@ This macro returns a picture of a knot with a given \texttt{knotName}.
     p3 := (fullcircle scaled 4cm);
     addStrandToKnot (theknot) (p1 shifted (4cm, -4cm), 1/5cm, "l", 
         "-1,1,-1,1,-1,1,-1,1,-1");
-    addStrandToKnot (theknot) (p2 shifted (4cm, -4cm), 1/6cm, "l", 
+    addStrandToKnot (theknot) (p2 shifted (4cm, -4cm), 1/6cm, "s", 
        "");
-    addStrandToKnot (theknot) (p3 shifted (4cm, -4cm), 1/7cm, "l", 
+    addStrandToKnot (theknot) (p3 shifted (4cm, -4cm), 1/7cm, "e", 
        "-1,1");
     draw knotFromStrands (theknot);
 \end{lstlisting}
@@ -418,9 +448,9 @@ This macro returns a picture of a knot with a given \texttt{knotName}.
     p3 := (fullcircle scaled 4cm);
     addStrandToKnot (theknot) (p1 shifted (4cm, -4cm), 1/5cm, "l", 
         "-1,1,-1,1,-1,1,-1,1,-1");
-    addStrandToKnot (theknot) (p2 shifted (4cm, -4cm), 1/6cm, "l", 
+    addStrandToKnot (theknot) (p2 shifted (4cm, -4cm), 1/6cm, "s", 
        "");
-    addStrandToKnot (theknot) (p3 shifted (4cm, -4cm), 1/7cm, "l", 
+    addStrandToKnot (theknot) (p3 shifted (4cm, -4cm), 1/7cm, "e", 
        "-1,1");
     draw knotFromStrands (theknot);
 \end{mplibcode}
@@ -824,7 +854,7 @@ Line 3 describe initial setup. Line 4 is problem's solution. Lines 8--11 set all
         .. (-4/3cm, 0) .. (-1/2cm, -2/3cm) .. (1/2cm, 0) 
         .. (-1/2cm, 3/2cm) .. cycle;
     p2 := p2 scaled 6/5;
-    addStrandToKnot (primeTwo) (p2, 1/4cm, "l", "1, -1, 1, -1, 1");
+    addStrandToKnot (primeTwo) (p2, 1/4cm, "s", "1, -1, 1, -1, 1");
     draw knotFromStrands (primeTwo) shifted (4cm, -2cm);
     p3 := (dir(0)*3/2cm) .. (dir(1*72)*2/3cm) 
         .. (dir(2*72)*3/2cm) .. (dir(3*72)*2/3cm) 
@@ -833,7 +863,7 @@ Line 3 describe initial setup. Line 4 is problem's solution. Lines 8--11 set all
         .. (dir(3*72)*3/2cm) .. (dir(4*72)*2/3cm) 
         .. cycle;
     p3 := (p3 rotated (72/4)) scaled 6/5;
-    addStrandToKnot (primeThree) (p3, 1/4cm, "l", "-1, 1, -1, 1, -1");
+    addStrandToKnot (primeThree) (p3, 1/4cm, "e", "-1, 1, -1, 1, -1");
     draw knotFromStrands (primeThree) shifted (8cm, 0);
 \end{mplibcode}
 

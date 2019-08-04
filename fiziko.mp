@@ -685,17 +685,25 @@ vardef tubeGenerate@#(expr p, q, d, i) =
                             )), currentDepth, point offsetPathTime of currentPath)
                     ), 0);
                 elseif (str @# = "stipples"):
-                    thinBrushGenerate.@#(currentPath,
-                    offsetPathTemplate(currentPath, 0)(
-                    stippleSize
-                    if odd (k): * (abs(ypart(point offsetPathTime of tubeWidth)/bw1) - 1/2lineDensity) fi
-                    * normalVectorToLightness(
-                        tubeAnglesToNormalVector((
-                            angleOnTube,
-                            angleRad(direction offsetPathTime of currentTubePath),
-                            angleRad(direction offsetPathTime of (tubeWidth yscaled 1/2))
-                            )), currentDepth, point offsetPathTime of currentPath)
-                    ), 0);
+                    begingroup
+                    save stippleShadingDensity;
+                    if w2 > 0:
+                        stippleShadingDensity := 2w0/(2**w2); % When the distance between the lines changes, wtipples should spread further apart
+                    else:
+                        stippleShadingDensity := w0;
+                    fi;
+                        thinBrushGenerate.@#(currentPath,
+                        offsetPathTemplate(currentPath, 0)(
+                        stippleSize
+                        if odd (k): * (abs(ypart(point offsetPathTime of tubeWidth)/bw1) - 1/2lineDensity) fi
+                        * normalVectorToLightness(
+                            tubeAnglesToNormalVector((
+                                angleOnTube,
+                                angleRad(direction offsetPathTime of currentTubePath),
+                                angleRad(direction offsetPathTime of (tubeWidth yscaled 1/2))
+                                )), currentDepth, point offsetPathTime of currentPath)
+                        ), 0);
+                    endgroup
                 fi;
             endfor;
         fi;
@@ -873,6 +881,13 @@ vardef sphere@#(expr d) =
                             )
                         ), 0);
                 elseif (str @# = "s"):
+                begingroup
+                save stippleShadingDensity;
+                    if order > 0:
+                        stippleShadingDensity := d/order; % When the distance between the lines changes, wtipples should spread further ap
+                    else:
+                        stippleShadingDensity := 1/2d;
+                    fi;
                     thinBrushGenerate.stipples(currentCircle,
                         offsetPathTemplate (currentCircle, 0) (
                             circleThickness
@@ -882,6 +897,7 @@ vardef sphere@#(expr d) =
                                 ), currentDepth, point offsetPathTime of currentCircle
                             )
                         ), 0);
+                endgroup
                 fi;
             endfor;
         );
