@@ -1,6 +1,6 @@
 %    fiziko 0.2.0
 %    MetaPost library for physics textbook illustrations
-%    Copyright 2019 Sergey Slyusarev
+%    Copyright 2020 Sergey Slyusarev
 %
 %    This program is free software: you can redistribute it and/or modify
 %    it under the terms of the GNU General Public License as published by
@@ -63,7 +63,7 @@ enddef;
 
 primarydef i maskedWith p =
 begingroup
-    save q, invertedmask, resultimage;
+    save q, invertedmask, resultimage, breakpoint;
     pair q[];
     path invertedmask;
     picture resultimage;
@@ -72,8 +72,8 @@ begingroup
     q3 := lrcorner(i) shifted (1, -1);
     q2 := (xpart(q3), ypart(q1));
     q4 := (xpart(q1), ypart(q3));
-    bp := ypart((ulcorner(p)--llcorner(p)) firstIntersectionTimes p);
-    invertedmask := (subpath (bp, length(p) + bp) of p) -- q1 -- q2 -- q3 -- q4 -- q1 -- cycle;
+    breakpoint := ypart((ulcorner(p)--llcorner(p)) firstIntersectionTimes p);
+    invertedmask := (subpath (breakpoint, length(p) + breakpoint) of p) -- q1 -- q2 -- q3 -- q4 -- q1 -- cycle;
     clip resultimage to invertedmask;
     resultimage
 endgroup
@@ -427,9 +427,9 @@ enddef;
 
 def brushGenerate (expr p, q, i) =
 begingroup
-    save w, bp, bt, t;
+    save w, brushPath, bt, t;
     numeric w[], t[];
-    path bp[], bt;
+    path brushPath[], bt;
     bt := q;
     w0 := (ypart(urcorner(bt)));
     w1 := (ypart(lrcorner(bt)));
@@ -445,9 +445,9 @@ begingroup
     elseif (arclength(p) > 0):
         if (w0 > 99/100minStrokeWidth)
             and (w1 > 99/100minStrokeWidth):
-            bp1 := offsetPathGenerate (p, q yscaled 1/2, 0);
-            bp2 := offsetPathGenerate (p, q yscaled -1/2, 0);
-            fill bp1 -- reverse(bp2) -- cycle;
+            brushPath1 := offsetPathGenerate (p, q yscaled 1/2, 0);
+            brushPath2 := offsetPathGenerate (p, q yscaled -1/2, 0);
+            fill brushPath1 -- reverse(brushPath2) -- cycle;
         elseif (w0 < 101/100minStrokeWidth) and (w1 < 101/100minStrokeWidth):
             thinBrushGenerate (p, q, 0)
         fi;
@@ -461,17 +461,17 @@ enddef;
 
 vardef thinBrushGenerate@#(expr p, q, i) =
 begingroup
-    save w, bp, bt, t, h, minLength, minWidth, dashPatternImage;
+    save w, brushPath, bt, t, h, minLength, minWidth, dashPatternImage;
     numeric w[], t[];
-    path bp[], bt;
+    path brushPath[], bt;
     picture dashPatternImage;
     bt := q;
     w0 := (ypart(urcorner(bt)));
     w1 := (ypart(lrcorner(bt)));
     w2 := floor((1/2(w0 + w1))/dashStrokeWidthStep)*dashStrokeWidthStep;
     t := cutPathTime(bt, w2);
-    bp1 := subpath (0, t) of p;
-    bp2 := subpath (t, length(p)) of p;
+    brushPath1 := subpath (0, t) of p;
+    brushPath2 := subpath (t, length(p)) of p;
     if (str @# = "") or (str @# = "hatches"):
         minLength := minDashStrokeLength;
         minWidth := minDashStrokeWidth;
@@ -480,10 +480,10 @@ begingroup
         minWidth := minStippleStrokeWidth;
     fi;
     if (((w0 - w1) > dashStrokeWidthStep) and (i < 15))
-        and ((arclength(bp1) > minLength)
-        or (arclength(bp2) > minLength)):
-        thinBrushGenerate@#(bp1, subpath (0, t) of q, i + 1);
-        thinBrushGenerate@#(bp2, subpath (t, length(q)) of q, i + 1);
+        and ((arclength(brushPath1) > minLength)
+        or (arclength(brushPath2) > minLength)):
+        thinBrushGenerate@#(brushPath1, subpath (0, t) of q, i + 1);
+        thinBrushGenerate@#(brushPath2, subpath (t, length(q)) of q, i + 1);
     else:
         if (str @# = "") or (str @# = "hatches"):
             if (w2 > minStrokeWidth):
@@ -503,14 +503,14 @@ begingroup
                     stippleSize := stippleSizeVar * (0.9 + uniformdeviate(0.3));
                     dashPatternImage := stipplesBrushPattern(w2, arclength(p));
                     if urcorner(dashPatternImage) <> (0,0):
-                        bp1 := offsetPathGenerate (p, (q yscaled 0) shifted (0, 1/3stippleShadingDensity), 0);
-                        draw bp1 withpen (pencircle scaled stippleSize) dashed dashPatternImage;
+                        brushPath1 := offsetPathGenerate (p, (q yscaled 0) shifted (0, 1/3stippleShadingDensity), 0);
+                        draw brushPath1 withpen (pencircle scaled stippleSize) dashed dashPatternImage;
                     fi;
                     stippleSize := stippleSizeVar * (0.9 + uniformdeviate(0.3));
                     dashPatternImage := stipplesBrushPattern(w2, arclength(p));
                     if urcorner(dashPatternImage) <> (0,0):
-                        bp2 := offsetPathGenerate (p, (q yscaled 0) shifted (0, -1/3stippleShadingDensity), 0);
-                        draw bp2 withpen (pencircle scaled stippleSize) dashed dashPatternImage;
+                        brushPath2 := offsetPathGenerate (p, (q yscaled 0) shifted (0, -1/3stippleShadingDensity), 0);
+                        draw brushPath2 withpen (pencircle scaled stippleSize) dashed dashPatternImage;
                     fi;
                     stippleSize := stippleSizeVar * (0.9 + uniformdeviate(0.3));
                     dashPatternImage := stipplesBrushPattern(w2, arclength(p));
@@ -1562,7 +1562,7 @@ vardef solidSurface (expr p) =
 enddef;
 
 vardef solid (expr p, a, t) =
-    save stripes, stripeskind, d, i, j, c;
+    save stripes, stripeskind, d, i, j, c, strokeVariation;
     picture stripes, stripeskind;
     pair c;
     stripes := image(
@@ -1572,18 +1572,19 @@ vardef solid (expr p, a, t) =
         c := 1/2[ulcorner(p rotated (90 - a)), lrcorner(p rotated (90 - a))] rotated (a - 90);
         for i:= 0 step (3/2shadingDensity)/d1 until 1:
             if (t = 1):
+                strokeVariation := uniformdeviate(1)-1/2;
                 j := round(i*d1/(3/2shadingDensity));
                 if (j mod 4) = 0:
-                    stripeskind := dashpattern (on 8shadingDensity off 4shadingDensity);
+                    stripeskind := dashpattern (on (8-strokeVariation)*shadingDensity off (4+strokeVariation)*shadingDensity);
                 fi;
                 if ((j mod 4) = 1) or ((j mod 4) = 3):
-                    stripeskind := dashpattern (off 1shadingDensity on 6shadingDensity off 5shadingDensity);
+                    stripeskind := dashpattern (off 1shadingDensity on (6-strokeVariation)*shadingDensity off (5+strokeVariation)*shadingDensity);
                 fi;
                 if (j mod 4) = 2:
                     stripeskind := dashpattern (on 0 off 12shadingDensity);
                 fi;
             fi;
-            draw ((dir(a) scaled 1/2d2) -- (dir(a + 180) scaled 1/2d2)) shifted c shifted i[dir(a + 90) scaled 1/2d1, dir(a -90) scaled 1/2d1] withpen thinpen
+            draw ((dir(a) scaled 1/2(d2-uniformdeviate(3shadingDensity))) -- (dir(a + 180) scaled 1/2d2)) shifted c shifted i[dir(a + 90) scaled 1/2d1, dir(a -90) scaled 1/2d1] withpen thinpen
             dashed stripeskind;
         endfor;
     );

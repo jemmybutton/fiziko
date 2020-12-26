@@ -363,6 +363,22 @@ This macro returns a \texttt{picture} of a solid surface on the right side of a 
 \subsection{solid (\emph{path, angle, type})}
 Fills given \texttt{path} with strokes of specific type at a given \texttt{angle}. \texttt{type} can be 0 (``solid'' strokes) and 1 (``glass'' strokes).
 
+\begin{lstlisting}
+    path p[];
+    p1 := unitsquare scaled 2cm;	
+    p2 := p1 shifted (4cm, 0);
+    draw solid(p1, 45, 0);
+    draw solid(p2, -45, 1);
+\end{lstlisting}
+
+\begin{mplibcode}
+    path p[];
+    p1 := unitsquare scaled 2cm;	
+    p2 := p1 shifted (4cm, 0);
+    draw solid(p1, 45, 0);
+    draw solid(p2, -45, 1);
+\end{mplibcode}
+
 \subsection{woodBlock (\emph{width, height})}
 Returns a \texttt{picture} of a rectangular block of wood with its bottom-left corner in the origin.
 
@@ -439,7 +455,7 @@ This macro returns a picture of a knot with a given \texttt{knotName}.
 \end{lstlisting}
 
 \begin{mplibcode}
-    path p[];    path p[];
+    path p[]; 
     p1 := (dir(90)*4/3cm) {dir(0)} .. tension 3/2
         .. (dir(90 + 120)*4/3cm){dir(90 + 30)} .. tension 3/2
         .. (dir(90 - 120)*4/3cm){dir(-90 - 30)} .. tension 3/2 
@@ -453,6 +469,21 @@ This macro returns a picture of a knot with a given \texttt{knotName}.
     addStrandToKnot (theknot) (p3 shifted (4cm, -4cm), 1/7cm, "e", 
        "-1,1");
     draw knotFromStrands (theknot);
+\end{mplibcode}
+
+\subsection{Other 3D contraptions}
+Some macros can be used to shade 3D polygons. Currently only flat surfaces re supported
+
+\subsubsection{flatSurface\emph{\#@}(\emph{surface outline path, normal vector, hatch angle})}
+This macro returns a \texttt{picture} of a flat surface with the specified \texttt{surface outline path} with the given \texttt{normal vector}, illuminated from the direction determined by \texttt{lightDirection} and with hatches aligned at the andle \texttt{hatch angle}. If \texttt{\#@} is \texttt{".hatches"} then the surface is shaded with hatches, if it's \texttt{".stipples"}, then the surface is shaded with stipples.
+
+\begin{mplibcode}
+    path p[];
+    p1 := unitsquare xscaled 1cm yscaled 2cm;
+    p2 := p1 shifted (1cm, 0);
+    draw flatSurface.hatches(p1, (-1,0,1), 45);
+    draw flatSurface.hatches(p2, (1,0,1), 45);
+draw p1; draw p2;
 \end{mplibcode}
 
 \section{Other macros}
