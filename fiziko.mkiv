@@ -1,0 +1,628 @@
+\startMPinclusions
+input fiziko.mp;
+\stopMPinclusions
+
+\setuptyping[
+  option=mp,
+  numbering=file,
+  keeptogether=yes,
+]
+\setuplinenumbering[
+  style={\ss\bfxx},
+  color=gray,
+]
+\setupinteraction[
+  state=start
+]
+
+\usesymbols[cc]
+
+\startsetups document:start
+  \startalignment[middle]
+    \documentvariable{author}\par
+    \blank[3*line]
+
+    {\ss\bfa\documentvariable{title}}
+
+    \vfill
+
+    \documentvariable{abstract}
+
+    \vfill
+
+    \goto{\documentvariable{url}}[url(\documentvariable{url})]\par
+    \blank[line]
+
+    \documentvariable{license}
+
+  \stopalignment
+  \page
+  \completecontent[criterium=all]
+  \page
+\stopsetups
+
+
+\startdocument[
+  author=Sergey Slyusarev,
+  title={\type{fiziko}\par v.0.2.0 package for \MetaPost},
+  abstract={This document describes a bunch of macros provided by the \quotation{fiziko} library for \MetaPost.},
+  license={This document is distributed under the CC-BY-SA 4.0 license\par\symbol[cc][by]~\symbol[cc][sa]},
+  url={https://github.com/jemmybutton/fiziko},
+]
+
+\section{Introduction}
+This MetaPost library was initially written to automate some elements of black and white illustrations for a physics textbook. First and foremost it provides functions to draw things like lines of variable width, shaded spheres and tubes of different kinds, which can be used to produce images of a variety of objects. The library also contains functions to draw some objects constructed from these primitives.
+
+\section{Usage}
+Simply include this in the beginning of your \MetaPost\ document:
+
+\startMP[numbering=no]
+input fiziko.mp
+\stopMP
+
+\section{Global variables}
+A few global variables control different aspects of the behavior of the provided macros. Not all possible values are meaningful and some will definitely result in ugly pictures or errors.
+
+\subsection{minStrokeWidth}
+This variable controls minimal thickness of lines that are used for shading. Below this value lines are not getting thinner, but become dashed instead, maintaining roughly the same amount of ink per unit length as a thinner line would take. Default value is one fifth of a point. There are several things that depend on this value, so it’s convenient to change it using a macro:
+
+\startMP[numbering=no]
+defineMinStrokeWidth(1/2pt);
+\stopMP
+
+\subsection{lightDirection}
+This variable controls direction from which light falls on shaded objects. It’s of \type{pair} type and is set in radians. Default direction is top-left:
+
+\startMP[numbering=no]
+lightDirection := (-1/8pi, 1/8pi);
+\stopMP
+
+\section{\quotation{Lower level} macros}
+Currently, algorithms are quite stupid and will produce decent results only in certain simple circumstances.
+
+\subsection{offsetPath (\emph{path})(\emph{offset function})}
+This macro returns offset path (of type \type{path}) to a current path with a distance from the original path controlled by some arbitrary function; typically, it is a function of path length, set as either \type{offsetPathTime} or \type{offsetPathLength}. Former is simply \type{time} on current path and changes from 0 to \type{length(path)}, and latter changes from 0 to 1 over the path \type{arctime} (as a function of \type{arclength}).
+
+\def\BufferName{offsetPath}
+\startbuffer[\BufferName]
+    path p, q;
+    p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
+    q := offsetPath(p)(1cm*sin(offsetPathLength*pi));
+    draw p;
+    draw q dashed evenly;
+\stopbuffer
+\typebuffer[\BufferName] \processMPbuffer[\BufferName]
+
+\subsection{brush (\emph{path})(\emph{offset function})}
+This macro returns a \type{picture} of a line of variable width along given path, which is  controlled by some arbitrary function, analogous to \type{offsetPath}. If line is getting thinner than \type{minStrokeWith}, it is drawn dashed.
+
+\def\BufferName{brush}
+\startbuffer[\BufferName]
+    path p;
+    p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
+    draw brush (p)(2minStrokeWidth*sin(offsetPathLength*pi));
+\stopbuffer
+\typebuffer[\BufferName] \processMPbuffer[\BufferName]
+
+\subsection{sphere.c (\emph{diameter})}
+This macro returns a \type{picture} of a sphere with specified diameter shaded with concentric strokes. Strokes are arranged to fit those of \type{tube.l}.
+
+\def\BufferName{sphere.c}
+\startbuffer[\BufferName]
+    for i := 1 step 1 until 6:
+        draw sphere.c(i*1/4cm) shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+\stopbuffer
+\typebuffer[\BufferName] \processMPbuffer[\BufferName]
+
+\subsection{sphere.s (\emph{diameter})}
+This macro returns a \type{picture} of a sphere with specified diameter shaded with stipples.
+
+\def\BufferName{sphere.s}
+\startbuffer[\BufferName]
+    for i := 1 step 1 until 6:
+        draw sphere.s(i*1/4cm) shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+\stopbuffer
+\typebuffer[\BufferName] \processMPbuffer[\BufferName]
+
+\subsection{sphereLat (\emph{diameter, angle})}
+This macro returns a \type{picture} of a shaded sphere with specified diameter. Unlike \type{sphere.c} macro, this one draws latitudinal strokes around axis rotated at specified \type{angle}.
+
+\def\BufferName{sphereLat}
+\startbuffer[\BufferName]
+    for i := 1 step 1 until 6:
+        draw sphereLat(i*1/4cm, -90 + i*30)
+             shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+\stopbuffer
+\typebuffer[\BufferName] \processMPbuffer[\BufferName]
+
+\subsection{tube.l (\emph{path})(\emph{offset function})}
+This macro returns a \type{picture} of a shaded \quotation{tube} of a variable width along a given path, which is  controlled by some arbitrary function, analogous to \type{offsetPath}. \quotation{Tube} drawn by this macro is shaded be longitudal strokes. Once tube is generated, you can call \type{tubeOutline} path global variable, if you need one.
+
+\def\BufferName{tube.l}
+\startbuffer[\BufferName]
+    path p;
+    p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
+    draw tube.l (p)(1/2cm*sin(offsetPathLength*pi));
+\stopbuffer
+\typebuffer[\BufferName] \processMPbuffer[\BufferName]
+
+\subsection{tube.t (\emph{path})(\emph{offset function})}
+This macro returns a \type{picture} of a shaded \quotation{tube} of variable width along given path, which is  controlled by some arbitrary function, analogous to \type{offsetPath}. \quotation{Tube} drawn by this macro is shaded be transverse strokes. Once tube is generated, you can call \type{tubeOutline} path global variable, if you need one.
+
+\def\BufferName{tube.t}
+\startbuffer[\BufferName]
+    path p;
+    p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
+    draw tube.t (p)(1/2cm*sin(offsetPathLength*pi));
+\stopbuffer
+\typebuffer[\BufferName] \processMPbuffer[\BufferName]
+
+\subsection{tube.s (\emph{path})(\emph{offset function})}
+This macro returns a \type{picture} of a shaded \quotation{tube} of variable width along given path, which is  controlled by some arbitrary function, analogous to \type{offsetPath}. \quotation{Tube} drawn by this macro is shaded with stipples. Once tube is generated, you can call \type{tubeOutline} path global variable, if you need one.
+
+\def\BufferName{tube.s}
+\startbuffer[\BufferName]
+    path p;
+    p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
+    draw tube.s (p)(1/2cm*sin(offsetPathLength*pi));
+\stopbuffer
+\typebuffer[\BufferName] \processMPbuffer[\BufferName]
+
+\subsection{tube.e (\emph{path})(\emph{offset function})}
+This macro returns the outline of a tube as a path.
+
+\section{\quotation{Higher level} macros}
+Using macros described in the previous section it is possible to construct more complex images. Macros for drawing some often used images are present in this package.
+
+\subsection{eye (\emph{angle})}
+This macro returns a \type{picture} of an eye pointed at the direction \type{angle} (in degrees). Eye size is controlled by a global variable \type{eyescale}, which has default value of \type{eyescale := 1/2cm;}.
+
+\def\BufferName{eye}
+\startbuffer[\BufferName]
+    save eyescale;
+    for i := 1 step 1 until 6:
+        eyescale := 1/6cm*i;
+        draw eye(i*60) shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+\stopbuffer
+\typebuffer[\BufferName] \processMPbuffer[\BufferName]
+
+\subsection{pulley (\emph{diameter, angle})}
+This macro returns a \type{picture} of a pulley with specified \type{diameter} and its support pointed at the direction \type{angle} (in degrees). Note that pulley’s support protrudes from its center by \type{pulleySupportSize*diameter} and by default \type{pulleySupportSize} = 3/2. Once pulley is generated, you can call \type{pulleyOutline} path global variable, if you need one.
+
+\def\BufferName{pulley}
+\startbuffer[\BufferName]
+    draw (-1/8cm, 0)--(12cm, 0);
+    for i := 1 step 1 until 6:
+        r := 1/7cm*i;
+        draw image(
+            draw pulley(2r, 0) shifted (0, -4/3r);
+            draw (r, -4/3r) -- (r, -2cm);
+            drawarrow (-r, -4/3r) -- (-r, -2cm);
+        ) shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+\stopbuffer
+\typebuffer[\BufferName] \processMPbuffer[\BufferName]
+
+\subsection{pulleyWheel (\emph{diameter})}
+This macro returns a \type{picture} of a pulley wheel with specified \type{diameter}.
+
+\def\BufferName{pulleyWheel}
+\startbuffer[\BufferName]
+    for i := 1 step 1 until 6:
+        r := 1/7cm*i;
+        draw image(
+            draw pulleyWheel(2r);
+            draw (r, 0) -- (r, 1cm);
+            drawarrow (-r, 0) -- (-r, 1cm);
+        ) shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+\stopbuffer
+\typebuffer[\BufferName] \processMPbuffer[\BufferName]
+
+\subsection{wheel (\emph{diameter, angle})}
+This macro returns a \type{picture} of a wheel with specified \type{diameter} and its support pointed at the direction \type{angle} (in degrees).
+
+\def\BufferName{wheel}
+\startbuffer[\BufferName]
+    draw (-1/8cm, 0)--(12cm, 0);
+    for i := 1 step 1 until 6:
+        r := 1/7cm*i;
+        draw wheel(2r, 0) shifted (0, -r) shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+\stopbuffer
+\typebuffer[\BufferName] \processMPbuffer[\BufferName]
+
+\subsection{weight.s (\emph{height})}
+This macro returns a \type{picture} of a weight of a specific \type{height} that is standing on the point \type{(0, 0)}.
+
+\def\BufferName{weight.s}
+\startbuffer[\BufferName]
+    for i := 1 step 1 until 6:
+        draw weight.s(1/4cm + i*1/4cm) shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+    draw (-1/8cm, 0)--(12cm, 0);
+\stopbuffer
+\typebuffer[\BufferName] \processMPbuffer[\BufferName]
+
+\subsection{weight.h (\emph{height})}
+This macro returns a \type{picture} of a weight of a specific \type{height} that is is hanging from the point \type{(0, 0)}.
+
+\def\BufferName{weight.h}
+\startbuffer[\BufferName]
+    for i := 1 step 1 until 6:
+        draw weight.h(1/4cm + i*1/4cm) shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+    draw (12cm, 0)--(-1/8cm, 0);
+\stopbuffer
+\typebuffer[\BufferName] \processMPbuffer[\BufferName]
+
+\subsection{spring (\emph{point a, point b, number of steps})}
+This macro returns a \type{picture} of a spring stretched between points \type{a} and \type{b} (of type \type{pair}), with specified \type{number of steps}. Spring width is controlled by global variable \type{springwidth} with the default value \type{springwidth := 1/8cm;}.
+
+\def\BufferName{spring}
+\startbuffer[\BufferName]
+    pair a, b;
+    a := (0, 0);
+    for i := 1 step 1 until 6:
+        springwidth := 1/16cm + i*1/48cm;
+        b := (i*1/3cm, - i*1/5cm);
+        draw spring (a, b, 10) shifted (2/5cm*(i*(i+1))/2, 0);
+    endfor;
+\stopbuffer
+\typebuffer[\BufferName] \processMPbuffer[\BufferName]
+
+\subsection{solidSurface (\emph{path})}
+This macro returns a \type{picture} of a solid surface on the right side of a given \type{path}.
+
+\def\BufferName{solidSurface}
+\startbuffer[\BufferName]
+    path p;
+    p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
+    draw solidSurface(p);
+\stopbuffer
+\typebuffer[\BufferName] \processMPbuffer[\BufferName]
+
+\subsection{solid (\emph{path, angle, type})}
+Fills given \type{path} with strokes of specific type at a given \type{angle}. \type{type} can be 0 (\quotation{solid} strokes) and 1 (\quotation{glass} strokes).
+
+\def\BufferName{solid}
+\startbuffer[\BufferName]
+    path p[];
+    p1 := unitsquare scaled 2cm;
+    p2 := p1 shifted (4cm, 0);
+    draw solid(p1, 45, 0);
+    draw solid(p2, -45, 1);
+\stopbuffer
+\typebuffer[\BufferName] \processMPbuffer[\BufferName]
+
+\subsection{woodBlock (\emph{width, height})}
+Returns a \type{picture} of a rectangular block of wood with its bottom-left corner in the origin.
+
+\def\BufferName{woodBlock}
+\startbuffer[\BufferName]
+    draw woodBlock(10cm, 1/2cm);
+\stopbuffer
+\typebuffer[\BufferName] \processMPbuffer[\BufferName]
+
+\subsection{woodenThing (\emph{path, angle})}
+Returns a \type{picture} of a wood texture at a given \type{angle} fitted into a given \type{path}.
+
+\def\BufferName{woodenThing}
+\startbuffer[\BufferName]
+    path p, q;
+    p := dir(-60) scaled 1/2 -- dir(90) scaled 2/3 -- dir (-120) scaled 3/5 -- cycle;
+    for i := 1 step 1 until 6:
+        q := (p scaled 3/2cm) rotated (i*60);
+        draw woodenThing (q, i*60) shifted (2cm*i, 0);
+    endfor;
+\stopbuffer
+\typebuffer[\BufferName] \processMPbuffer[\BufferName]
+
+\subsection{globe (\emph{radius, longitude, latitude})}
+This macro returns a \type{picture} of the globe of specified \type{radius} centered at specific \type{longitude} and \type{latitude};
+
+\def\BufferName{globe}
+\startbuffer[\BufferName]
+    for i := 1 step 1 until 6:
+        draw globe(i*1/4cm, i*60, -90 + i*30)
+         shifted (1/2cm*(i*(i+1))/2, 0);
+    endfor;
+\stopbuffer
+\typebuffer[\BufferName] \processMPbuffer[\BufferName]
+
+\subsection{Knots}
+There are two macros to handle knot drawing: \type{addStrandToKnot} and \type{knotFromStrands}. Currently the algorithm is not especially stable.
+
+\subsubsection{addStrandToKnot (\emph{knotName}) (\emph{path, ropeWidth, ropeType, intersectionOrder})}
+This macro adds a strand to knot named \type{knotName} and returns nothing. Strand follows the given \type{path} and has a given \type{ropeWidth}. \type{ropeType} can be \type{"l"}, \type{"t"} (as in \type{tube.l} and \type{tube.t}) or \type{"e"} (for an unshaded strand). \type{intersectionOrder} is a string of comma separated numbers which represent a \quotation{layer} to which intersections along the strand go.
+
+\subsubsection{knotFromStrands (\emph{knotName})}
+This macro returns a picture of a knot with a given \type{knotName}.
+
+\def\BufferName{knotFromStrands}
+\startbuffer[\BufferName]
+    path p[];
+    p1 := (dir(90)*4/3cm) {dir(0)} .. tension 3/2
+        .. (dir(90 + 120)*4/3cm){dir(90 + 30)} .. tension 3/2
+        .. (dir(90 - 120)*4/3cm){dir(-90 - 30)} .. tension 3/2
+        .. cycle;
+    p2 := (fullcircle scaled 3cm) shifted (0, -3/2cm);
+    p3 := (fullcircle scaled 4cm);
+    addStrandToKnot (theknot) (p1 shifted (4cm, -4cm), 1/5cm, "l",
+        "-1,1,-1,1,-1,1,-1,1,-1");
+    addStrandToKnot (theknot) (p2 shifted (4cm, -4cm), 1/6cm, "s",
+       "");
+    addStrandToKnot (theknot) (p3 shifted (4cm, -4cm), 1/7cm, "e",
+       "-1,1");
+    draw knotFromStrands (theknot);
+\stopbuffer
+\typebuffer[\BufferName] \processMPbuffer[\BufferName]
+
+\subsection{Other 3D contraptions}
+Some macros can be used to shade 3D polygons. Currently only flat surfaces are supported
+
+\subsubsection{flatSurface\emph{\#@}(\emph{surface outline path, normal vector, hatch angle})}
+This macro returns a \type{picture} of a flat surface with the specified \type{surface outline path} with the given \type{normal vector}, illuminated from the direction determined by \type{lightDirection} and with hatches aligned at the andle \type{hatch angle}. If \type{\#@} is \type{".hatches"} then the surface is shaded with hatches, if it’s \type{".stipples"}, then the surface is shaded with stipples.
+
+\def\BufferName{flatSurface}
+\startbuffer[\BufferName]
+    path p[];
+    p1 := unitsquare xscaled 1cm yscaled 2cm;
+    p2 := p1 shifted (1cm, 0);
+    draw flatSurface.hatches(p1, (-1,0,1), 45);
+    draw flatSurface.hatches(p2, (1,0,1), 45);
+draw p1; draw p2;
+\stopbuffer
+\typebuffer[\BufferName] \processMPbuffer[\BufferName]
+
+\section{Other macros}
+Some macros that are not directly related to drawing are listed below
+
+\subsection{refractionPath (\emph{initial ray, shape, refraction coefficient})}
+This macro returns a \type{path} that represent refraction of some \type{ray} (any variable of type  \type{path}, point next to last in a given path is considered a source of a \quotation{ray}, and last point determines its direction) through some  \type{shape} with given \type{refraction coefficient}. When appropriate, the \quotation{ray} is fully internally reflected.
+
+Setting \type{refraction coefficient} to 0 results in reflection instead of refraction in all cases.
+
+\def\BufferName{refractionPath}
+\startbuffer[\BufferName]
+    path r, p;
+    p := fullcircle scaled 2.1cm;
+    draw p;
+    for i:= 1cm step -1/4cm until -1cm:
+        r := (-4cm, i) -- (-1cm, i);
+        draw refractionPath(r, p, 1.5);
+    endfor;
+\stopbuffer
+\typebuffer[\BufferName] \processMPbuffer[\BufferName]
+
+
+\subsection{lens (\emph{(left radius, right radius), thickness, diameter, units})}
+This macro returns a \type{path} that represent a section of a lens with given radii of curvature (positive value for convex, negative --- for concave), thickness (i. e. distance benween sides' centers) and diameter (i. e. height) in given arbitrary units.
+
+\def\BufferName{lens}
+\startbuffer[\BufferName]
+    draw lens((5, 10), 1/2, 2, cm);
+    draw lens((-10, -5), 1/4, 2, cm) shifted (2cm, 0);
+    draw lens((infinity, 7), 1/4, 2, cm) shifted (4cm, 0);
+\stopbuffer
+\typebuffer[\BufferName] \processMPbuffer[\BufferName]
+
+\section{Auxilary macros}
+Some macros that not related to physical problems at all are listed below.
+
+\subsection{\emph{picture} maskedWith \emph{path}}
+This macro masks a part of a \type{picture} with closed \type{path}. In fact this is inversion of metapost’s built-in \type{clip} but, in contrast to the latter, it does not modify original image. Note that it requires that counter-clockwise \type{path} to work properly.
+
+\subsection{\emph{path} firstIntersectionTimes \emph{path}}
+This macro is similar to metapost’s \type{intersectiontimes} but it returns intersection times with smallest time on first path.
+
+\subsection{pathSubdivide \emph{path, n}}
+This macro returns original \type{path} with \type{n}-times more points.
+
+\subsection{drawmidarrow (\emph{path})}
+Draws \type{path} with arrows in the middles of segments with length no less than  \type{midArrowLimit} (another global variable, 1cm by default).
+
+\subsection{markAngle (\emph{point a, point o, point b})(\emph{text})}
+This macro marks an angle \type{aob} (counter-clockwise) with some \type{text}
+
+\def\BufferName{markAngle}
+\startbuffer[\BufferName]
+    pair a, o, b;
+    for i:= 30 step 60 until 390:
+        o := (10cm*(i/360), 0);
+        a := dir(i/2)*4/3cm shifted o;
+        b := dir(i)*4/3cm shifted o;
+        draw (a--o--b);
+        markAngle(a, o, b)(btex $\alpha$ etex);
+    endfor;
+\stopbuffer
+\typebuffer[\BufferName] \processMPbuffer[\BufferName]
+
+
+\section{Some examples}
+
+\subsection{Gregory-Maksutov type telescope}
+Lines 3--11 define parameters of lenses and mirrors\footnote{Taken from here http://www.google.ru/patents/US2701983}. Lines 12--16 generate lenses. On line 20 shape of prism is defined. Line 22 cuts part of the rear mirror. Line 26 describes mirror part of the front lens. On lines 31--33 all the glass parts are drawn. On lines 34--36 all the mirror ones. On lines 39--44 rays are traced through all system in order specified in loop on line 41. Lines 49--56 are about the telescope frame.
+
+\def\BufferName{GMtt}
+\startbuffer[\BufferName]
+    path p[], q[], axis[], f[]; pair o;
+    u := 6mm;
+    r1 := -36.979; r2 := -r1; t1 := 0.7; n1 := 1.517; d1 := 5;
+    l1 := 8.182;
+    r3 := -11.657; r4 := r3; t2 := 0.2; n2 := n1; d2 := 3/2;
+    l2 := 0.4;
+    r5 := -30.433; r6 := 9.598; t3 := 0.39; n3 := 1.621; d3 := d2;
+    l3 := 0.828;
+    r7 := -35.512; r8 := infinity; t4 := 0.7; n4 := 0; d4 := d1;
+    l4 := 5.272;
+    ll0 := 0;
+    for i := 1 upto 4:
+    	ll[i] := ll[i-1] + t[i] + l[i];
+    	p[i] := lens ((r[i*2 - 1], r[i*2]), t[i], d[i], u)
+	        shifted (ll[i-1]*u, 0);
+    endfor;
+    axis1 := (0, 0) -- (ll4*u, 0);
+    axis2 := reverse(axis1);
+    ll5 := ll4 - 1/2l4;
+    p5 :=  ((-1,-1) -- (1,1) -- (-1,1) -- cycle)
+          scaled (1/2d2*u) shifted (ll5*u, 0);
+    p6 := (subpath
+        (ypart((axis1 shifted (0, 1/2d2*u)) firstIntersectionTimes p4),
+        ypart((axis2 shifted (0, 1/2d2*u)) firstIntersectionTimes p4))
+        of p4) -- cycle;
+    p7 := (subpath
+        (ypart((axis2 shifted (0, 3/4d2*u)) firstIntersectionTimes p1),
+        ypart((axis2 shifted (0, -3/4d2*u)) firstIntersectionTimes p1))
+        of p1);
+    p7 := p7 -- (reverse(p7) shifted ((-1/3t1)*u, 0)) -- cycle;
+    for i := 1, 2, 3, 5:
+        draw p[i] withpen thickpen; draw solid (p[i], 45, 1);
+    endfor;
+    draw solid (p7, -45, 0);
+    draw p6 withpen thickpen; draw solid (p6, -45, 0);
+    draw p6 yscaled -1 withpen thickpen;
+    draw solid (p6 yscaled -1, -45, 0);
+    n7 := 0; n5 := n1;
+    for i := 0, 1:
+        q[i] := (-3/2u, -2u + i*4u) -- (16u, -2u + i*4u);
+        for j = 1, 4, 7, 2, 3, 5:
+            q[i] := refractionPath(q[i], p[j], n[j]);
+        endfor;
+    endfor;
+        o := whatever[point length(q0) of q0, point length(q0)-1 of q0]
+           = whatever[point length(q1) of q1, point length(q1)-1 of q1];
+    for i := 0, 1: drawmidarrow (q[i] -- o) withpen thinpen; endfor;
+    draw eye(-91) shifted o shifted (0, u);
+    f1 := (-1/4u, 1/2d1*u) -- ((ll3 + t4)*u, 1/2d1*u)
+          -- ((ll3 + t4)*u, 1/2d2*u);
+    f2 := (ll1*u - 1/8u, 1/2d2*u) -- (ll5*u - 1/2d2*u, 1/2d2*u)
+          -- (ll5*u - 1/2d2*u, ypart(o));
+    f3 := (ll1*u - 1/8u, -1/2d2*u) -- (ll5*u + 1/2d2*u, -1/2d2*u)
+          -- (ll5*u + 1/2d2*u, ypart(o));
+    draw f1 withpen fatpen; draw f1 yscaled -1 withpen fatpen;
+    draw f2 withpen fatpen; draw f3 withpen fatpen;
+\stopbuffer
+\typebuffer[\BufferName][keeptogether=no] \processMPbuffer[\BufferName]
+
+
+\subsection{L’Hôpital’s Pulley Problem}
+Line 3 describe initial setup. Line 4 is problem’s solution. Lines 8–11 set all the points where they belong. Lines 12–16 are needed to decide where to put the pulley.
+
+\def\BufferName{PulleyProblem}
+\startbuffer[\BufferName]
+    pair p[], o[];
+    numeric a, d[], l[], x[], y[];
+    l0 := 6; l1 := 4; l2 := 4;
+    x1 := (l1**2 + abs(l1)*((sqrt(8)*l0)++l1))/4l0;
+    y1 := l1+-+x1;
+    y2 := l2 - ((l0-x1)++y1);
+    d1 := 2/3cm; d2 := 4/3cm; d3 := 5/6d1;
+    p1 := (0, 0);
+    p2 := (l0*cm, 0);
+    p3 := (x1*cm, -y1*cm);
+    p4 := p3 shifted (0, -y2*cm);
+    o1 := (unitvector(p4-p3) rotated 90 scaled 1/2d3);
+    o2 := (unitvector(p3-p2) rotated 90 scaled 1/2d3);
+    p5 := whatever [p3 shifted o1, p4 shifted o1]
+        = whatever [p3 shifted o2, p2 shifted o2];
+    a := angle(p1-p3);
+    draw solidSurface(11/10[p1,p2] -- 11/10[p2, p1]);
+    draw pulley (d1, a - 90) shifted p5;
+    draw image(
+        draw p1 -- p3 -- p2 withpen thickpen;
+        draw p3 -- p4 withpen thickpen;
+    ) maskedWith (pulleyOutline shifted p5);
+    draw sphere.c(d2) shifted p4 shifted (0, -1/2d2);
+    dotlabel.llft(btex $A$ etex, p1);
+    dotlabel.lrt(btex $B$ etex, p2);
+    dotlabel.ulft(btex $C$ etex, p4);
+    label.llft(btex $l$ etex, 1/2[p1, p3]);
+    markAngle(p3, p1, p2)(btex $\alpha$ etex);
+\stopbuffer
+\typebuffer[\BufferName][keeptogether=no] \processMPbuffer[\BufferName]
+
+\subsection{Hooke’s law}
+
+\def\BufferName{HookesLaw}
+\startbuffer[\BufferName]
+    numeric l[],d, h;
+    pair p[], q[];
+    l0 := 3/2cm; l1 := 1cm;
+    d := 1cm; h := 7/8cm;
+    p1 := (0, 0); p2 := (0, -l0);
+    p3 := (d, 0); p4 := (d, -l0-l1);
+    p5 := (2d, 0); p6 := (2d, -l0-2l1); p7 := (2d, -l0-2l1-h);
+    draw solidSurface((2d + 1/2cm, 0)--(-1/2cm, 0));
+    draw spring(p1, p2, 20);
+    draw spring(p3, p4, 20);
+    draw weight.h(h) shifted p4;
+    draw spring(p5, p6, 20);
+    draw weight.h(h) shifted p6;
+    draw weight.h(h) shifted p7;
+    q1 := (0, ypart(p2));
+    q2 := (0, ypart(p4));
+    q3 := (0, ypart(p6));
+    draw p2 -- q1 withpen thinpen;
+    draw p4 -- q2 withpen thinpen;
+    draw p6 -- q3 withpen thinpen;
+    drawdblarrow q1--q2 withpen thinpen;
+    drawdblarrow q2--q3 withpen thinpen;
+    label.lft (btex $x$ etex, 1/2[q1, q2]);
+    label.lft (btex $x$ etex, 1/2[q2, q3]);
+\stopbuffer
+\typebuffer[\BufferName][keeptogether=no] \processMPbuffer[\BufferName]
+
+\subsection{Weight on a cart}
+
+\def\BufferName{Weight}
+\startbuffer[\BufferName]
+    numeric l, w, r,  h;
+    l := 4cm;
+    w := 1/4cm;
+    r := 2/3cm;
+    h := 1cm;
+    draw solidSurface((-1/5l, 0) -- (6/5l, 0));
+    draw woodBlock (l, w) shifted (0, r);
+    draw wheel (r, 0) shifted (r, 1/2r);
+    draw wheel (r, 0) shifted (l-r, 1/2r);
+    draw weight.s(h) shifted (1/2l, r + w);
+\stopbuffer
+\typebuffer[\BufferName] \processMPbuffer[\BufferName]
+
+\subsection{Some knots}
+
+\def\BufferName{Knots}
+\startbuffer[\BufferName]
+    path p[];
+    p1 := (dir(90)*4/3cm) {dir(0)} .. tension 3/2
+        .. (dir(90 + 120)*4/3cm){dir(90 + 30)} .. tension 3/2
+        .. (dir(90 - 120)*4/3cm){dir(-90 - 30)} .. tension 3/2
+        .. cycle;
+    p1 := p1 scaled 6/5;
+    addStrandToKnot (primeOne) (p1, 1/4cm, "l", "1, -1, 1");
+    draw knotFromStrands (primeOne);
+    p2 := (0, 2cm) .. (1/2cm, 3/2cm) .. (-1/2cm, 0)
+        .. (1/2cm, -2/3cm) .. (4/3cm, 0) .. (0, 17/12cm)
+        .. (-4/3cm, 0) .. (-1/2cm, -2/3cm) .. (1/2cm, 0)
+        .. (-1/2cm, 3/2cm) .. cycle;
+    p2 := p2 scaled 6/5;
+    addStrandToKnot (primeTwo) (p2, 1/4cm, "l", "1, -1, 1, -1, 1");
+    draw knotFromStrands (primeTwo) shifted (4cm, 0);
+    p3 := (dir(0)*3/2cm) .. (dir(1*72)*2/3cm)
+        .. (dir(2*72)*3/2cm) .. (dir(3*72)*2/3cm)
+        .. (dir(4*72)*3/2cm) .. (dir(0)*2/3cm)
+        ..  (dir(1*72)*3/2cm) .. (dir(2*72)*2/3cm)
+        .. (dir(3*72)*3/2cm) .. (dir(4*72)*2/3cm)
+        .. cycle;
+    p3 := (p3 rotated (72/4)) scaled 6/5;
+    addStrandToKnot (primeThree) (p3, 1/4cm, "l", "-1, 1, -1, 1, -1");
+    draw knotFromStrands (primeThree) shifted (8cm, 0);
+\stopbuffer
+\typebuffer[\BufferName][keeptogether=no] \processMPbuffer[\BufferName]
+
+\stopdocument
