@@ -1,18 +1,15 @@
-\documentclass{article}
+\documentclass{ltxdoc}
 
-\usepackage{luamplib}
+\usepackage{luamplib, listings, ccicons}
 \everymplib{verbatimtex \leavevmode etex; input fiziko.mp; beginfig(1);}
 \everyendmplib{endfig;}
 
-\usepackage{listings}
 \lstset{
 language=MetaPost,
 numbers=left,
 numberstyle=\tiny,
 basicstyle=\scriptsize
 }
-
-\usepackage{cclicenses}
 
 \author{Sergey Slyusarev}
 \title{``fiziko'' v. 0.2.0 package for MetaPost}
@@ -28,7 +25,7 @@ This document describes a bunch of macros provided by ``fiziko'' library for Met
 
 This document is distributed under CC-BY-SA 4.0 license 
 
-\cc\bysa
+\ccbysa
 
 https://github.com/jemmybutton/fiziko
 
