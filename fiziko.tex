@@ -1,6 +1,6 @@
 \documentclass{ltxdoc}
 
-\usepackage{luamplib, listings, ccicons}
+\usepackage{luamplib, listings, bxtexlogo, ccicons}
 \everymplib{verbatimtex \leavevmode etex; input fiziko.mp; beginfig(1);}
 \everyendmplib{endfig;}
 
@@ -12,13 +12,13 @@ basicstyle=\scriptsize
 }
 
 \author{Sergey Slyusarev}
-\title{``fiziko'' v. 0.2.0 package for MetaPost}
+\title{``fiziko'' v. 0.2.0 package for \METAPOST}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-This document describes a bunch of macros provided by ``fiziko'' library for MetaPost.
+This document describes a bunch of macros provided by ``fiziko'' library for \METAPOST.
 \end{abstract}
 
 \begin{centering}
@@ -32,10 +32,10 @@ https://github.com/jemmybutton/fiziko
 \end{centering}
 
 \section{Introduction}
-This MetaPost library was initially written to automate some elements of black and white illustrations for a physics textbook. First and foremost it provides functions to draw things like lines of variable width, shaded spheres and tubes of different kinds, which can be used to produce images of a variety of objects. The library also contains functions to draw some objects constructed from these primitives.
+This \METAPOST\ library was initially written to automate some elements of black and white illustrations for a physics textbook. First and foremost it provides functions to draw things like lines of variable width, shaded spheres and tubes of different kinds, which can be used to produce images of a variety of objects. The library also contains functions to draw some objects constructed from these primitives.
 
 \section{Usage}
-Simply include this in the beginning of your MetaPost document:
+Simply include this in the beginning of your \METAPOST\ document:
 
 \begin{lstlisting}
 input fiziko.mp
@@ -227,7 +227,7 @@ This macro returns a \texttt{picture} of a pulley with specified \texttt{diamete
     endfor;
 \end{lstlisting}
 
-\begin{mplibcode}
+\noindent\begin{mplibcode}
     draw (-1/8cm, 0)--(12cm, 0);
     for i := 1 step 1 until 6:
         r := 1/7cm*i;
@@ -275,7 +275,8 @@ This macro returns a \texttt{picture} of a wheel with specified \texttt{diameter
     endfor;
 \end{lstlisting}
 
-\begin{mplibcode}
+
+\noindent\begin{mplibcode}
     draw (-1/8cm, 0)--(12cm, 0);
     for i := 1 step 1 until 6:
         r := 1/7cm*i;
@@ -294,7 +295,7 @@ This macro returns a \texttt{picture} of a weight of a specific \texttt{height} 
     draw (-1/8cm, 0)--(12cm, 0);
 \end{lstlisting}
 
-\begin{mplibcode}
+\noindent\begin{mplibcode}
     for i := 1 step 1 until 6:
         draw weight.s(1/4cm + i*1/4cm) shifted (1/2cm*(i*(i+1))/2, 0);
     endfor;
@@ -311,7 +312,7 @@ This macro returns a \texttt{picture} of a weight of a specific \texttt{height} 
     draw (12cm, 0)--(-1/8cm, 0);
 \end{lstlisting}
 
-\begin{mplibcode}
+\noindent\begin{mplibcode}
     for i := 1 step 1 until 6:
         draw weight.h(1/4cm + i*1/4cm) shifted (1/2cm*(i*(i+1))/2, 0);
     endfor;
@@ -426,7 +427,7 @@ This macro returns a \texttt{picture} of the globe of specified \texttt{radius} 
 \end{mplibcode}
 
 \subsection{Knots}
-There are two macros to handle knot drawing: \texttt{addStrandToKnot} and \texttt{knotFromStrands}. Currently the algorithm is not especially stable.
+There are two macros to handle knot drawing: \texttt{addStrandToKnot} and \texttt{knot\-From\-Strands}. Currently the algorithm is not especially stable.
 
 \subsubsection{addStrandToKnot (\emph{knotName}) (\emph{path, ropeWidth, ropeType, intersectionOrder})}
 This macro adds a strand to knot named \texttt{knotName} and returns nothing. Strand follows the given \texttt{path} and has a given \texttt{ropeWidth}. \texttt{ropeType} can be \texttt{"l"}, \texttt{"t"} (as in \texttt{tube.l} and \texttt{tube.t}) or \texttt{"e"} (for an unshaded strand). \texttt{intersectionOrder} is a string of comma separated numbers which represent a ``layer'' to which intersections along the strand go.
@@ -531,10 +532,10 @@ This macro returns a \texttt{path} that represent a section of a lens with given
 Some macros that not related to physical problems at all are listed below.
 
 \subsection{\emph{picture} maskedWith \emph{path}}
-This macro masks a part of a \texttt{picture} with closed \texttt{path}. In fact this is inversion of metapost's built-in \texttt{clip} but, in contrast to the latter, it does not modify original image. Note that it requires that counter-clockwise \texttt{path} to work properly.
+This macro masks a part of a \texttt{picture} with closed \texttt{path}. In fact this is inversion of \METAPOST's built-in \texttt{clip} but, in contrast to the latter, it does not modify original image. Note that it requires that counter-clockwise \texttt{path} to work properly.
 
 \subsection{\emph{path} firstIntersectionTimes \emph{path}}
-This macro is similar to metapost's \texttt{intersectiontimes} but it returns intersection times with smallest time on first path.
+This macro is similar to \METAPOST's \texttt{intersectiontimes} but it returns intersection times with smallest time on first path.
 
 \subsection{pathSubdivide \emph{path, n}}
 This macro returns original \texttt{path} with \texttt{n}-times more points.
