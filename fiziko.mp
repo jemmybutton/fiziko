@@ -561,10 +561,13 @@ vardef thinBrushPattern (expr w, l) =
     d1 := d1 + 1/2uniformdeviate(d1);
     d2 := (minStrokeWidth - d0)*(d1/d0);
     d3 := round(l/(d2 + d1));
-    if (d3 < 1): d3 := 1; fi;
-    d4 := (l/d3)/(d2 + d1);
-    d1 := d1*d4;
-    d2 := d2*d4;
+    % if dash pattern is shorter than one, don't scale
+    if (d3 > 1):
+        %if (d3 < 1): d3 := 1; fi;
+        d4 := (l/d3)/(d2 + d1);
+        d1 := d1*d4;
+        d2 := d2*d4;
+    fi;
     if (uniformdeviate(2) > 1):
         dashpattern (on d1 off 2d2)
     else:
@@ -2445,6 +2448,15 @@ vardef knotFromStrands (suffix knotName) =
             draw layerPicture[i];
         endfor;
     )
+enddef;
+
+vardef initKnot (suffix knotName) =
+    numeric knotName.nStrands;
+    knotName.nStrands := 0;
+    path knotName.strandPath[];
+    numeric knotName.strandWidth[];
+    string knotName.strandStyle[];
+    string knotName.intLayers[];
 enddef;
 
 vardef addStrandToKnot (suffix knotName) (expr p, w, s, intersectionLayers) =
