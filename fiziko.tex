@@ -429,6 +429,9 @@ This macro returns a \texttt{picture} of the globe of specified \texttt{radius} 
 \subsection{Knots}
 There are two macros to handle knot drawing: \texttt{addStrandToKnot} and \texttt{knot\-From\-Strands}. Currently the algorithm is not especially stable.
 
+% \subsubsection{initKnot (\emph{knotName})}
+% This macro creates an empty knot with no strands named \texttt{knotName} and returns nothing. Useful if a knot is redefined with the same name repeatedly.
+
 \subsubsection{addStrandToKnot (\emph{knotName}) (\emph{path, ropeWidth, ropeType, intersectionOrder})}
 This macro adds a strand to knot named \texttt{knotName} and returns nothing. Strand follows the given \texttt{path} and has a given \texttt{ropeWidth}. \texttt{ropeType} can be \texttt{"l"}, \texttt{"t"} (as in \texttt{tube.l} and \texttt{tube.t}) or \texttt{"e"} (for an unshaded strand). \texttt{intersectionOrder} is a string of comma separated numbers which represent a ``layer'' to which intersections along the strand go.
 

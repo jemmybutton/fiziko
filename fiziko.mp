@@ -481,7 +481,7 @@ begingroup
     fi;
     if (((w0 - w1) > dashStrokeWidthStep) and (i < 15))
         and ((arclength(brushPath1) > minLength)
-        or (arclength(brushPath2) > minLength)):
+        and (arclength(brushPath2) > minLength)):
         thinBrushGenerate@#(brushPath1, subpath (0, t) of q, i + 1);
         thinBrushGenerate@#(brushPath2, subpath (t, length(q)) of q, i + 1);
     else:
@@ -557,21 +557,19 @@ vardef thinBrushPattern (expr w, l) =
     % After we get d1 other measurements are calculated,
     % so filled area per unit length remains adequate and dashes are aligned
     % with segments
+    % d1*mSW = (d1*w + d2*w) -> d2=d1(mSW-w)/w
     d1 := (1/2minDashStrokeLength) + (((d0/minStrokeWidth)**2)*1/2minDashStrokeLength);
     d1 := d1 + 1/2uniformdeviate(d1);
     d2 := (minStrokeWidth - d0)*(d1/d0);
     d3 := round(l/(d2 + d1));
-    % if dash pattern is shorter than one, don't scale
-    if (d3 > 1):
-        %if (d3 < 1): d3 := 1; fi;
-        d4 := (l/d3)/(d2 + d1);
-        d1 := d1*d4;
-        d2 := d2*d4;
-    fi;
+    if (d3 < 1): d3 := 1; fi;
+    d4 := (l/d3)/(d2 + d1);
+    d1 := d1*d4;
+    d2 := d2*d4;
     if (uniformdeviate(2) > 1):
-        dashpattern (on d1 off 2d2)
+        dashpattern (on d1 off d2)
     else:
-        dashpattern (off 2d2 on d1)
+        dashpattern (off d2 on d1)
     fi
 enddef;
 
