@@ -220,9 +220,9 @@ def defineMinStrokeWidth (expr msw) =
     minDashStrokeWidth := 1/3minStrokeWidth;
 
     % this value corresponds to particular dashing algorithm and is subject to change whenever this algorithm changes
-    minDashStrokeLength := 3minStrokeWidth;
+    minDashStrokeLength := 6minStrokeWidth;
 
-    dashStrokeWidthStep := 1/5minDashStrokeWidth;
+    dashStrokeWidthStep := (minStrokeWidth - minDashStrokeWidth)/16;
 
     % all the shading algorithms need to know how close lines should be packed
     shadingDensity := 3maxShadingStrokeWidth;
@@ -465,13 +465,6 @@ begingroup
     numeric w[], t[];
     path brushPath[], bt;
     picture dashPatternImage;
-    bt := q;
-    w0 := (ypart(urcorner(bt)));
-    w1 := (ypart(lrcorner(bt)));
-    w2 := floor((1/2(w0 + w1))/dashStrokeWidthStep)*dashStrokeWidthStep;
-    t := cutPathTime(bt, w2);
-    brushPath1 := subpath (0, t) of p;
-    brushPath2 := subpath (t, length(p)) of p;
     if (str @# = "") or (str @# = "hatches"):
         minLength := minDashStrokeLength;
         minWidth := minDashStrokeWidth;
@@ -479,46 +472,64 @@ begingroup
         minLength := minStippleStep;
         minWidth := minStippleStrokeWidth;
     fi;
-    if (((w0 - w1) > dashStrokeWidthStep) and (i < 15))
-        and ((arclength(brushPath1) > minLength)
-        and (arclength(brushPath2) > minLength)):
-        thinBrushGenerate@#(brushPath1, subpath (0, t) of q, i + 1);
-        thinBrushGenerate@#(brushPath2, subpath (t, length(q)) of q, i + 1);
-    else:
-        if (str @# = "") or (str @# = "hatches"):
-            if (w2 > minStrokeWidth):
-                w2 := minStrokeWidth;
-            fi;
-            if (w2 >= minWidth) and (arclength(p) > 0):
-                draw p withpen thinpen dashed thinBrushPattern(w2, arclength(p));
-            fi;
-        elseif str @# = "stipples":
-            begingroup
-                interim linecap := rounded;
-                save stippleSizeVar;
-                stippleSizeVar := stippleSize;
-                save stippleSize;
-                w2 := 1/3w2;
+    bt := q;
+    w0 := ypart(urcorner(bt));
+    w1 := ypart(lrcorner(bt));
+    if (w0 > minWidth + 1/100):
+        if (w1 > minWidth - 1/100):
+            w2 := floor((1/2(w0 + w1) - minWidth)/dashStrokeWidthStep)*dashStrokeWidthStep + minWidth;
+        else:
+            w2 := minWidth;
+        fi;
+        t := cutPathTime(bt, w2);
+        brushPath1 := subpath (0, t) of p;
+        brushPath2 := subpath (t, length(p)) of p;
+        if (((w0 - w1) >= dashStrokeWidthStep) and (i < 15))
+            and ((arclength(brushPath1) > minLength)
+            or (arclength(brushPath2) > minLength))
+            and (t > 1/100) and (t < length(p) - 1/100):
+            thinBrushGenerate@#(brushPath1, subpath (0, t) of q, i + 1);
+            thinBrushGenerate@#(brushPath2, subpath (t, length(q)) of q, i + 1);
+        else:
+            if (str @# = "") or (str @# = "hatches"):
+                if (w2 > minStrokeWidth):
+                    w2 := minStrokeWidth;
+                fi;
                 if (w2 >= minWidth) and (arclength(p) > 0):
-                    stippleSize := stippleSizeVar * (0.9 + uniformdeviate(0.3));
-                    dashPatternImage := stipplesBrushPattern(w2, arclength(p));
-                    if urcorner(dashPatternImage) <> (0,0):
-                        brushPath1 := offsetPathGenerate (p, (q yscaled 0) shifted (0, 1/3stippleShadingDensity), 0);
-                        draw brushPath1 withpen (pencircle scaled stippleSize) dashed dashPatternImage;
-                    fi;
-                    stippleSize := stippleSizeVar * (0.9 + uniformdeviate(0.3));
-                    dashPatternImage := stipplesBrushPattern(w2, arclength(p));
-                    if urcorner(dashPatternImage) <> (0,0):
-                        brushPath2 := offsetPathGenerate (p, (q yscaled 0) shifted (0, -1/3stippleShadingDensity), 0);
-                        draw brushPath2 withpen (pencircle scaled stippleSize) dashed dashPatternImage;
-                    fi;
-                    stippleSize := stippleSizeVar * (0.9 + uniformdeviate(0.3));
-                    dashPatternImage := stipplesBrushPattern(w2, arclength(p));
-                    if urcorner(dashPatternImage) <> (0,0):
-                        draw p withpen (pencircle scaled stippleSize) dashed dashPatternImage;
+                    if (w2 < minStrokeWidth) and (arclength(p) > minLength):
+                        draw p withpen thinpen dashed thinBrushPattern(w2, arclength(p));
+                    else:
+                        draw p withpen thinpen;
                     fi;
                 fi;
-            endgroup
+            elseif str @# = "stipples":
+                begingroup
+                    interim linecap := rounded;
+                    save stippleSizeVar;
+                    stippleSizeVar := stippleSize;
+                    save stippleSize;
+                    w2 := 1/3w2;
+                    if (w2 >= minWidth) and (arclength(p) > 0):
+                        stippleSize := stippleSizeVar * (0.9 + uniformdeviate(0.3));
+                        dashPatternImage := stipplesBrushPattern(w2, arclength(p));
+                        if urcorner(dashPatternImage) <> (0,0):
+                            brushPath1 := offsetPathGenerate (p, (q yscaled 0) shifted (0, 1/3stippleShadingDensity), 0);
+                            draw brushPath1 withpen (pencircle scaled stippleSize) dashed dashPatternImage;
+                        fi;
+                        stippleSize := stippleSizeVar * (0.9 + uniformdeviate(0.3));
+                        dashPatternImage := stipplesBrushPattern(w2, arclength(p));
+                        if urcorner(dashPatternImage) <> (0,0):
+                            brushPath2 := offsetPathGenerate (p, (q yscaled 0) shifted (0, -1/3stippleShadingDensity), 0);
+                            draw brushPath2 withpen (pencircle scaled stippleSize) dashed dashPatternImage;
+                        fi;
+                        stippleSize := stippleSizeVar * (0.9 + uniformdeviate(0.3));
+                        dashPatternImage := stipplesBrushPattern(w2, arclength(p));
+                        if urcorner(dashPatternImage) <> (0,0):
+                            draw p withpen (pencircle scaled stippleSize) dashed dashPatternImage;
+                        fi;
+                    fi;
+                endgroup
+            fi;
         fi;
     fi;
 endgroup
@@ -558,7 +569,7 @@ vardef thinBrushPattern (expr w, l) =
     % so filled area per unit length remains adequate and dashes are aligned
     % with segments
     % d1*mSW = (d1*w + d2*w) -> d2=d1(mSW-w)/w
-    d1 := (1/2minDashStrokeLength) + (((d0/minStrokeWidth)**2)*1/2minDashStrokeLength);
+    d1 := (1/2minDashStrokeLength) + (((d0/minStrokeWidth)**(5/2))*1/2minDashStrokeLength);
     d1 := d1 + 1/2uniformdeviate(d1);
     d2 := (minStrokeWidth - d0)*(d1/d0);
     d3 := round(l/(d2 + d1));
@@ -567,9 +578,9 @@ vardef thinBrushPattern (expr w, l) =
     d1 := d1*d4;
     d2 := d2*d4;
     if (uniformdeviate(2) > 1):
-        dashpattern (on d1 off d2)
+        dashpattern (on d1/2 off d2 on d1/2)
     else:
-        dashpattern (off d2 on d1)
+        dashpattern (off d2/2 on d1 off d2/2)
     fi
 enddef;
 
