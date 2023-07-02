@@ -1,6 +1,6 @@
-%    fiziko 0.2.0
+%    fiziko 0.2.1
 %    MetaPost library for physics textbook illustrations
-%    Copyright 2022 Sergey Slyusarev
+%    Copyright 2023 Sergey Slyusarev
 %
 %    This program is free software: you can redistribute it and/or modify
 %    it under the terms of the GNU General Public License as published by
@@ -358,9 +358,10 @@ enddef;
 %
 
 vardef offsetPathGenerate (expr p, q, i) =
-    save returnPath, c, d, pl, ps;
+    save returnPath, c, d, a, pl, ps;
     path returnPath, pl[];
     pair c[], d[];
+    numeric a[];
     c1 := precontrol i of p;
     c2 := point i of p;
     c3 := postcontrol i of p;
@@ -401,8 +402,18 @@ vardef offsetPathGenerate (expr p, q, i) =
             and (abs(c1-c4)>0)
             and (abs(direction i of q) > 0):
             c6 := c4 shifted (unitvector(c4 - c3) rotated 90 scaled ypart(point i + 1 of q));
-            c7 := (c2 - c1) scaled (abs(c5-c6)/abs(c1-c4)) rotated angle(direction i of q) shifted c5;
-            c8 := (c3 - c4) scaled (abs(c5-c6)/abs(c1-c4)) rotated angle(direction i + 1 of q) shifted c6;
+            %if abs(direction i of q) > 0:
+				a1 := angle(direction i of q);
+            %else:
+			%	a1 := angle((point (i + 1/10) of q) - (point (i - 1/10) of q));
+            %fi;
+            %if abs(direction i + 1 of q) > 0:
+				a2 := angle(direction i + 1 of q);
+            %else:
+			%	a2 := angle((point (i + 1 + 1/10) of q) - (point (i + 1 - 1/10) of q));
+            %fi; 
+            c7 := (c2 - c1) scaled (abs(c5-c6)/abs(c1-c4)) rotated a1 shifted c5;
+            c8 := (c3 - c4) scaled (abs(c5-c6)/abs(c1-c4)) rotated a2 shifted c6;
             returnPath := returnPath .. controls c7 and c8 .. offsetPathGenerate (p, q, i + 1);
         else:
             returnPath := returnPath -- offsetPathGenerate (p, q, i + 1);
@@ -1027,6 +1038,12 @@ enddef;
 % Once we get two angles at some point of some surface, we can compute light intensity there.
 %
 
+% In case you need to have your shaded objects white-on-black, 
+% you can just switch invertedLight invertedLight to 'true'
+
+boolean invertedLight;
+invertedLight := false;
+
 vardef normalVectorToLightness (expr normalVector, d, q) =
     save returnValue, shiftedShadowPath;
     path shiftedShadowPath;
@@ -1045,10 +1062,15 @@ vardef normalVectorToLightness (expr normalVector, d, q) =
         returnValue := lightnessPP(returnValue);
     fi;
     if returnValue > 1:
-        1
-    else:
-        returnValue
-    fi
+        returnValue := 1;
+    fi;
+    if returnValue < 0:
+        returnValue := 0;
+    fi;
+    if invertedLight:
+		returnValue := 1 - returnValue;
+	fi;
+    returnValue
 enddef;
 
 vardef lightnessPP (expr v) =

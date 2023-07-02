@@ -44,7 +44,7 @@ input fiziko.mp;
 
 \startdocument[
   author=Sergey Slyusarev,
-  title={\type{fiziko}\par v.0.2.0 package for \MetaPost},
+  title={\type{fiziko}\par v.0.2.1 package for \MetaPost},
   abstract={This document describes a bunch of macros provided by the \quotation{fiziko} library for \MetaPost.},
   license={This document is distributed under the CC-BY-SA 4.0 license\par\symbol[cc][by]~\symbol[cc][sa]},
   url={https://github.com/jemmybutton/fiziko},
@@ -76,6 +76,19 @@ This variable controls direction from which light falls on shaded objects. It’
 \startMP[numbering=no]
 lightDirection := (-1/8pi, 1/8pi);
 \stopMP
+
+\subsection{lightDirection}
+This variable determines whether the light is inverted. This comes in handy when you need to have your shaded objects white on black. It's of \type{boolean} type. Default value is false:
+
+\def\BufferName{lightDirection}
+\startbuffer[\BufferName]
+draw sphere.c(1cm);
+invertedLight := true;
+fill ((unitsquare shifted (-1/2,-1/2)) scaled 3/2cm) shifted (3/2cm, 0) withcolor black;
+draw sphere.c(1cm) shifted (3/2cm, 0) withcolor white;
+\stopbuffer
+\typebuffer[\BufferName] \processMPbuffer[\BufferName]
+
 
 \section{\quotation{Lower level} macros}
 Currently, algorithms are quite stupid and will produce decent results only in certain simple circumstances.
