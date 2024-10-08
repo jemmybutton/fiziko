@@ -73,6 +73,7 @@ draw sphere.c(1cm);
 invertedLight := true;
 fill ((unitsquare shifted (-1/2,-1/2)) scaled 3/2cm) shifted (3/2cm, 0) withcolor black;
 draw sphere.c(1cm) shifted (3/2cm, 0) withcolor white;
+invertedLight := false;
 \end{mplibcode}
 
 \section{``Lower level'' macros}
@@ -424,6 +425,22 @@ Returns a \texttt{picture} of a wood texture at a given \texttt{angle} fitted in
         q := (p scaled 3/2cm) rotated (i*60);
         draw woodenThing (q, i*60) shifted (2cm*i, 0);
     endfor;
+\end{mplibcode}
+
+\subsection{woodenSurface (\emph{path})}
+
+Returns a \texttt{picture} similar to that of a solid surface on the right side of a given \texttt{path}, but with wood texture .
+
+\begin{lstlisting}
+    path p;
+    p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
+    draw woodenSurface(p);
+\end{lstlisting}
+
+\begin{mplibcode}
+    path p;
+    p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
+    draw woodenSurface(p);
 \end{mplibcode}
 
 \subsection{globe (\emph{radius, longitude, latitude})}

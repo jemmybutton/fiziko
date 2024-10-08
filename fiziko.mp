@@ -1220,7 +1220,7 @@ enddef;
 %
 
 %
-% isoLines goes through i by j matrix of nodes (xy), looking for square, that has some of it's
+% isoLines goes through i by j matrix of nodes (xy), looking for a square, that has some of its
 % angles below zero and some - above, when found, it calls cLine, that tries to build segment of
 % isoline, that happen to go through abovementioned square. Thickness of line is
 % controlled by values in v array.
@@ -1228,38 +1228,45 @@ enddef;
 %
 
 vardef isoLines (suffix xy)(expr cs, l, s) =
-    save xxyy, i, j, c, v, sqB, iL, lvl;
+    save xxyy, i, j, c, v, sqB, iL, lvl, isNotMasked;
     numeric xxyy[][], c[], v[], sqB, sqbM;
+    boolean isNotMasked;
+    isNotMasked := true;
     lvl := l;
     path iL;
     image(
         for i := 0 step 1 until xpart(cs) - 1:
             for j := 0 step 1 until ypart(cs) - 1:
-                if (unknown xxyy[i][j]):
-                    c1 := xy[i][j]+lvl;
-                    c2 := xy[i][j+1]+lvl;
-                    c3 := xy[i+1][j]+lvl;
-                    c4 := xy[i+1][j+1]+lvl;
-                    sqB := 0;
-                    sqBm := 0;
-                    if (abs(sign(c1)+sign(c2)+sign(c3)+sign(c4)) < 4):
-                        iL := cLine (xy)((i, j), (0, 0), 0, cs) scaled s;
-                        brushGenerate (reverse(iL),
-                        offsetPathTemplate(iL, 0)(
-                        1/16minStrokeWidth
-                            /(1/64 + 2(
-                                if (offsetPathTime < length(iL) - 1):
-                                    (offsetPathTime - floor(offsetPathTime))
-                                        [v[floor(sqB + offsetPathTime)],
-                                        v[ceiling(sqB + offsetPathTime)]]
-                                else:
-                                    1
-                                fi
-                                ))
-                        )
-                        , 0);
-                    fi;
-                fi;
+				if (boolean isoLinesMask[i][j]):
+					isNotMasked := isoLinesMask[i][j];
+				fi;
+				if isNotMasked:
+					if (unknown xxyy[i][j]):
+						c1 := xy[i][j]+lvl;
+						c2 := xy[i][j+1]+lvl;
+						c3 := xy[i+1][j]+lvl;
+						c4 := xy[i+1][j+1]+lvl;
+						sqB := 0;
+						sqBm := 0;
+						if (abs(sign(c1)+sign(c2)+sign(c3)+sign(c4)) < 4):
+							iL := cLine (xy)((i, j), (0, 0), 0, cs) scaled s;
+							brushGenerate (reverse(iL),
+							offsetPathTemplate(iL, 0)(
+							1/16minStrokeWidth
+								/(1/64 + 2(
+									if (offsetPathTime < length(iL) - 1):
+										(offsetPathTime - floor(offsetPathTime))
+											[v[floor(sqB + offsetPathTime)],
+											v[ceiling(sqB + offsetPathTime)]]
+									else:
+										1
+									fi
+									))
+							)
+							, 0);
+						fi;
+					fi;
+				fi;
             endfor;
         endfor;
         draw (0,0);
@@ -1269,13 +1276,18 @@ enddef;
 % cLine tries to generate continouos segment of an isoline
 
 vardef cLine (suffix xy)(expr ij, dr, st, cs) =
-    save p, d, dd, n, i, j, k, outputPath, sqS, cp, dp, nd;
+    save p, d, dd, n, i, j, k, outputPath, sqS, cp, dp, nd, isNotMasked;
     pair p[], d[], dd[], cp[], dp[];
     path outputPath;
+    boolean isNotMasked;
+    isNotMasked := true;
     i := xpart(ij);
     j := ypart(ij);
     sqS := 0;
-    if (i >= 0) and (i <= xpart(cs)-1) and (j >= 0) and (j <= ypart(cs)-1):
+    if (boolean isoLinesMask[i][j]):
+		isNotMasked := isoLinesMask[i][j];
+    fi;
+    if (i >= 0) and (i <= xpart(cs)-1) and (j >= 0) and (j <= ypart(cs)-1) and isNotMasked:
         n := 0;
         c1 := xy[i][j] + lvl; d1:= (i, j);
         c2 := xy[i][j+1] + lvl; d2:= (i, j+1);
@@ -1583,11 +1595,14 @@ enddef;
 % This macro draws solid surface
 %
 
+numeric solidSurfaceThickness;
+solidSurfaceThickness := 1/4cm;
+
 vardef solidSurface (expr p) =
     save q, s, d, stripes;
     path q, s;
     picture stripes;
-    q := offsetPath(p) (-1/4cm);
+    q := offsetPath(p) (-solidSurfaceThickness);
     s := p -- reverse(q) -- cycle;
     image(
         draw solid (s, 45, 0);
@@ -2098,9 +2113,11 @@ enddef;
 % and then calls isoLines for each year ring (shifting values in matrix by woodBlockYRdensity)
 
 vardef woodBlock (expr w, l) =
-    save wood, wKnot, nwKnot, p, q, i, j, k, cl, tr, wS, lS;
+    save wood, isoLinesMask, maskCoordinates, minWithinMask, maxWithinMask, isNotMasked, wKnot, nwKnot, p, q, i, j, k, cl, tr, wS, lS;
     numeric wood[][];
-    pair wKnot[];
+    boolean isNotMasked;
+    isNotMasked := true;
+    pair wKnot[], maskCoordinates;
     path q;
     picture p;
     if (l > w):
@@ -2109,6 +2126,22 @@ vardef woodBlock (expr w, l) =
     else:
         wS := round(l/woodBlockRes);
         lS := round(w/woodBlockRes);
+    fi;
+    if (path woodBlockMaskPath):
+		boolean isoLinesMask[][];
+		for i := -1 step 1 until wS + 1:
+			for j := -1 step 1 until lS + 1:
+				isoLinesMask[i][j] := true;
+				if (l > w):
+					maskCoordinates := (i, j);
+				else:
+					maskCoordinates := (j, i);
+				fi;
+				if not (maskCoordinates*woodBlockRes isInside woodBlockMaskPath):	
+					isoLinesMask[i][j] := false;
+				fi;
+			endfor;
+		endfor;
     fi;
     image(
         p := image(
@@ -2140,14 +2173,29 @@ vardef woodBlock (expr w, l) =
             exitif (j >= 10) or (i >= 1/2((w/cm)*(l*cm))/(woodKnotDensity/cm));
             endfor;
             nwKnot := i;
+            minWithinMask := infinity;
+            maxWithinMask := -infinity;
             for i := 0 step 1 until wS:
                 k := uniformdeviate(1/8woodBlockYRdensity);
                 for j := 0 step 1 until lS:
-                    wood[i][j] := wField (wKnot)(i, j, (wS, lS), nwKnot) + k;
+					if (boolean isoLinesMask[i][j]):
+						isNotMasked := isoLinesMask[i][j];
+					fi;
+					wood[i][j] := wField (wKnot)(i, j, (wS, lS), nwKnot) + k;
+					if isNotMasked:
+						if wood[i][j] > maxWithinMask: 
+							maxWithinMask := wood[i][j];
+						fi;
+						if wood[i][j] < minWithinMask: 
+							minWithinMask := wood[i][j];
+						fi;
+					fi;
                 endfor;
             endfor;
             for i := -wS/(80woodBlockYRdensity) - 2 upto wS/(80woodBlockYRdensity) + 2:
-                draw isoLines(wood)((wS, lS), woodBlockYRdensity*i + uniformdeviate(1/8woodBlockYRdensity), woodBlockRes);
+				if (((minWithinMask + woodBlockYRdensity*i) < 0) and ((maxWithinMask + woodBlockYRdensity*i) > 0)):
+					draw isoLines(wood)((wS, lS), woodBlockYRdensity*i + uniformdeviate(1/8woodBlockYRdensity), woodBlockRes);	
+				fi;
             endfor;
         );
         q := (0, 0) -- (w, 0) -- (w, l) -- (0, l) -- cycle;
@@ -2161,13 +2209,18 @@ enddef;
 % woodenThing fits a woodBlock into thingOutline at a given woodAngle
 
 vardef woodenThing (expr thingOutline, woodAngle) =
-    save shiftedThing, thingOrigin, thingWoodBlock;
-    path shiftedThing;
+    save shiftedThing, woodBlockMaskPath, thingOrigin, thingWoodBlock;
+    path shiftedThing, woodBlockMaskPath;
     pair thingOrigin;
     picture thingWoodBlock;
     shiftedThing := thingOutline rotated -woodAngle;
     thingOrigin := llcorner(shiftedThing);
     shiftedThing := shiftedThing shifted -thingOrigin;
+    if turningnumber(shiftedThing) > 0:
+		woodBlockMaskPath := offsetPath(shiftedThing, -woodBlockRes);
+	else:
+		woodBlockMaskPath := offsetPath(shiftedThing, woodBlockRes);
+	fi;
     thingWoodBlock := woodBlock(xpart(urcorner(shiftedThing)), ypart(urcorner(shiftedThing)));
     clip thingWoodBlock to shiftedThing;
     thingWoodBlock := (thingWoodBlock shifted thingOrigin) rotated woodAngle;
@@ -2175,6 +2228,43 @@ vardef woodenThing (expr thingOutline, woodAngle) =
         draw thingOutline withpen thinpen;
         draw thingWoodBlock;
         )
+enddef;
+
+% similar to solidSurfece, but with wood texture
+
+vardef woodenSurface (expr p) =
+	save surfaceOutline, surfaceAngle;
+	numeric surfaceAngle;
+	path surfaceOutline;
+	surfaceOutline := p --  reverse(offsetPath(p) (-solidSurfaceThickness)) -- cycle;
+	surfaceAngle := findNarrowest(surfaceOutline);
+	woodenThing (surfaceOutline,-surfaceAngle)
+enddef;
+
+% finds the orientation for path p in which it is the narrowest
+
+vardef findNarrowest (expr p) =
+	save minWidth, currentWidth, minWidthAngle, rotatedPath, i;
+	numeric minWidth, currentWidth, minWidthAngle, i;
+	path rotatedPath;
+	minWidth := infinity;
+	for i := 0 step 10 until 170:
+		rotatedPath := p rotated i;
+		currentWidth := ypart(urcorner(rotatedPath)-llcorner(rotatedPath));
+		if currentWidth < minWidth:
+			minWidth := currentWidth;
+			minWidthAngle := i;
+		fi;
+	endfor;
+	for i := minWidthAngle -9 step 1 until minWidthAngle + 9:
+		rotatedPath := p rotated i;
+		currentWidth := ypart(urcorner(rotatedPath)-llcorner(rotatedPath));
+		if currentWidth < minWidth:
+			minWidth := currentWidth;
+			minWidthAngle := i;
+		fi;
+	endfor;
+	minWidthAngle
 enddef;
 
 %
