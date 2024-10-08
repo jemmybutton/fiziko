@@ -1229,8 +1229,8 @@ enddef;
 
 vardef isoLines (suffix xy)(expr cs, l, s) =
     save xxyy, i, j, c, v, sqB, iL, lvl, isNotMasked;
-    numeric xxyy[][], c[], v[], sqB, sqbM;
-    boolean isNotMasked;
+    numeric c[], v[], sqB, sqbM;
+    boolean isNotMasked, xxyy[][];
     isNotMasked := true;
     lvl := l;
     path iL;
@@ -1287,7 +1287,7 @@ vardef cLine (suffix xy)(expr ij, dr, st, cs) =
     if (boolean isoLinesMask[i][j]):
 		isNotMasked := isoLinesMask[i][j];
     fi;
-    if (i >= 0) and (i <= xpart(cs)-1) and (j >= 0) and (j <= ypart(cs)-1) and isNotMasked:
+    if (i >= 0) and (i <= xpart(cs)-1) and (j >= 0) and (j <= ypart(cs)-1):
         n := 0;
         c1 := xy[i][j] + lvl; d1:= (i, j);
         c2 := xy[i][j+1] + lvl; d2:= (i, j+1);
@@ -1307,8 +1307,11 @@ vardef cLine (suffix xy)(expr ij, dr, st, cs) =
             fi;
         endfor;
         sqS := max(c1, c2, c3, c4) - min(c1, c2, c3, c4);
-        if (unknown xxyy[i][j]):
-            xxyy[i][j] := 1;
+        if (unknown xxyy[i][j]) and isNotMasked:
+            xxyy[i][j] := true;
+			if (boolean isoLinesMask[i][j]):
+				isoLinesMask[i][j] := false;
+			fi;	
             if (dr = (0, 0)):
                 outputPath := cLine (xy)(ij shifted dd2, dd2, st + 1,cs) -- p1 -- p2 -- cLine (xy)(ij shifted dd1, dd1, st - 1,cs);
             else:
@@ -1318,7 +1321,7 @@ vardef cLine (suffix xy)(expr ij, dr, st, cs) =
                 elseif (unknown(xxyy[i + xpart(dd2)][j + ypart(dd2)])):
                     nd := 2;
                 fi;
-                if nd > 0:
+                if nd > 0:			
                     outputPath := cLine (xy)(ij shifted dd[nd], dd[nd], st + sign(st),cs);
                     p3 := p[nd];
                     if (st > 0):
@@ -1335,7 +1338,10 @@ vardef cLine (suffix xy)(expr ij, dr, st, cs) =
         fi;
     else:
         outputPath := (i, j);
-        xxyy[i][j] := 1;
+        xxyy[i][j] := true;
+		if (boolean isoLinesMask[i][j]):
+			isoLinesMask[i][j] := false;
+		fi;	
     fi;
     if (st < sqB): sqB := st; fi;
     if (st > sqBm): sqBm := st; fi;
@@ -2115,7 +2121,7 @@ enddef;
 vardef woodBlock (expr w, l) =
     save wood, isoLinesMask, maskCoordinates, minWithinMask, maxWithinMask, isNotMasked, wKnot, nwKnot, p, q, i, j, k, cl, tr, wS, lS;
     numeric wood[][];
-    boolean isNotMasked;
+    boolean isNotMasked, isoLinesMask[][];
     isNotMasked := true;
     pair wKnot[], maskCoordinates;
     path q;
@@ -2127,11 +2133,10 @@ vardef woodBlock (expr w, l) =
         wS := round(l/woodBlockRes);
         lS := round(w/woodBlockRes);
     fi;
-    if (path woodBlockMaskPath):
-		boolean isoLinesMask[][];
-		for i := -1 step 1 until wS + 1:
-			for j := -1 step 1 until lS + 1:
-				isoLinesMask[i][j] := true;
+	for i := -1 step 1 until wS + 1:
+		for j := -1 step 1 until lS + 1:
+			isoLinesMask[i][j] := true;
+			if (path woodBlockMaskPath):
 				if (l > w):
 					maskCoordinates := (i, j);
 				else:
@@ -2140,9 +2145,9 @@ vardef woodBlock (expr w, l) =
 				if not (maskCoordinates*woodBlockRes isInside woodBlockMaskPath):	
 					isoLinesMask[i][j] := false;
 				fi;
-			endfor;
+			fi;
 		endfor;
-    fi;
+	endfor;
     image(
         p := image(
             i := -1;
@@ -2192,7 +2197,7 @@ vardef woodBlock (expr w, l) =
 					fi;
                 endfor;
             endfor;
-            for i := -wS/(80woodBlockYRdensity) - 2 upto wS/(80woodBlockYRdensity) + 2:
+            for i := -maxWithinMask/woodBlockYRdensity - 1 upto -minWithinMask/woodBlockYRdensity + 1:
 				if (((minWithinMask + woodBlockYRdensity*i) < 0) and ((maxWithinMask + woodBlockYRdensity*i) > 0)):
 					draw isoLines(wood)((wS, lS), woodBlockYRdensity*i + uniformdeviate(1/8woodBlockYRdensity), woodBlockRes);	
 				fi;

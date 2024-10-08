@@ -86,6 +86,7 @@ draw sphere.c(1cm);
 invertedLight := true;
 fill ((unitsquare shifted (-1/2,-1/2)) scaled 3/2cm) shifted (3/2cm, 0) withcolor black;
 draw sphere.c(1cm) shifted (3/2cm, 0) withcolor white;
+invertedLight := false;
 \stopbuffer
 \typebuffer[\BufferName] \processMPbuffer[\BufferName]
 
@@ -332,6 +333,17 @@ Returns a \type{picture} of a wood texture at a given \type{angle} fitted into a
         q := (p scaled 3/2cm) rotated (i*60);
         draw woodenThing (q, i*60) shifted (2cm*i, 0);
     endfor;
+\stopbuffer
+\typebuffer[\BufferName] \processMPbuffer[\BufferName]
+
+\subsection{woodenSurface (\emph{path, angle})}
+Returns a \type{picture} similar to that of a solid surface on the right side of a given \type{path}, but with wood texture .
+
+\def\BufferName{woodenSurface}
+\startbuffer[\BufferName]
+    path p;
+    p := (0,0){dir(30)}..(5cm, 0)..{dir(30)}(10cm, 0);
+    draw woodenSurface(p);
 \stopbuffer
 \typebuffer[\BufferName] \processMPbuffer[\BufferName]
 
